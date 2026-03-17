@@ -79,11 +79,21 @@ function App() {
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory') => {
     if (type === 'file') {
       load(selectedPath)
+      window.location.hash = selectedPath
       const dir = selectedPath.substring(0, selectedPath.lastIndexOf('/'))
       setCurrentDir(dir)
       setDrawerVisible(false)
     } else {
       setCurrentDir(selectedPath)
+    }
+  }, [load])
+
+  useEffect(() => {
+    const hash = decodeURIComponent(window.location.hash.slice(1))
+    if (hash) {
+      load(hash)
+      const dir = hash.substring(0, hash.lastIndexOf('/'))
+      setCurrentDir(dir)
     }
   }, [load])
 
@@ -130,6 +140,10 @@ function App() {
   }, [])
 
   const fileName = path ? path.split('/').pop() : null
+
+  useEffect(() => {
+    document.title = fileName ? `${fileName} - ColonyDoc` : 'ColonyDoc'
+  }, [fileName])
 
   return (
     <div className="app">

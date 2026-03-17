@@ -335,3 +335,25 @@ body {
   display: block;
   text-align: center;
 }
+
+.preview-pane table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.preview-pane table th,
+.preview-pane table td {
+  border: 1px solid var(--color-border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.preview-pane table th {
+  background-color: var(--color-sidebar-bg);
+  font-weight: 600;
+}
+
+.preview-pane table tr:nth-child(even) {
+  background-color: var(--color-sidebar-bg);
+}
