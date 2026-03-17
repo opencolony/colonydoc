@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, memo } from 'react'
 import { Popup, Input, Button, Space } from 'antd-mobile'
 
 interface CreateFileModalProps {
@@ -8,7 +8,11 @@ interface CreateFileModalProps {
   currentDir: string
 }
 
-export function CreateFileModal({ visible, onClose, onCreate, currentDir }: CreateFileModalProps) {
+const POPUP_BODY_STYLE: React.CSSProperties = { borderRadius: '16px 16px 0 0' }
+const INPUT_STYLE: React.CSSProperties = { '--font-size': '16px' } as React.CSSProperties
+const SPACE_STYLE: React.CSSProperties = { width: '100%', justifyContent: 'flex-end' }
+
+export const CreateFileModal = memo(function CreateFileModal({ visible, onClose, onCreate, currentDir }: CreateFileModalProps) {
   const [name, setName] = useState('')
   const [isDirectory, setIsDirectory] = useState(false)
 
@@ -25,7 +29,7 @@ export function CreateFileModal({ visible, onClose, onCreate, currentDir }: Crea
     <Popup
       visible={visible}
       onMaskClick={onClose}
-      bodyStyle={{ borderRadius: '16px 16px 0 0' }}
+      bodyStyle={POPUP_BODY_STYLE}
     >
       <div style={{ padding: 20 }}>
         <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>新建</h3>
@@ -36,7 +40,7 @@ export function CreateFileModal({ visible, onClose, onCreate, currentDir }: Crea
           placeholder={isDirectory ? '文件夹名称' : '文件名称 (自动添加 .md)'}
           value={name}
           onChange={setName}
-          style={{ '--font-size': '16px' } as any}
+          style={INPUT_STYLE}
         />
         <div style={{ margin: '16px 0' }}>
           <Space>
@@ -56,7 +60,7 @@ export function CreateFileModal({ visible, onClose, onCreate, currentDir }: Crea
             </Button>
           </Space>
         </div>
-        <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+        <Space style={SPACE_STYLE}>
           <Button onClick={onClose}>取消</Button>
           <Button color="primary" onClick={handleSubmit}>
             创建
@@ -65,4 +69,4 @@ export function CreateFileModal({ visible, onClose, onCreate, currentDir }: Crea
       </div>
     </Popup>
   )
-}
+})

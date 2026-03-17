@@ -2,26 +2,28 @@ import { useState, useEffect, useCallback } from 'react'
 
 type Theme = 'light' | 'dark' | 'system'
 
+const STORAGE_KEY = 'colonydoc-theme'
+
 function getSystemTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-function getStoredTheme(): Theme {
+function readStoredTheme(): Theme {
   if (typeof window === 'undefined') return 'system'
-  const stored = localStorage.getItem('colonydoc-theme')
+  const stored = localStorage.getItem(STORAGE_KEY)
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored
   }
   return 'system'
 }
 
+const initialTheme = readStoredTheme()
+const initialResolvedTheme: 'light' | 'dark' = initialTheme === 'system' ? getSystemTheme() : initialTheme
+
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(getStoredTheme)
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
-    const stored = getStoredTheme()
-    return stored === 'system' ? getSystemTheme() : stored
-  })
+  const [theme, setThemeState] = useState<Theme>(initialTheme)
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(initialResolvedTheme)
 
   useEffect(() => {
     const resolved = theme === 'system' ? getSystemTheme() : theme
@@ -46,7 +48,7 @@ export function useTheme() {
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme)
-    localStorage.setItem('colonydoc-theme', newTheme)
+    localStorage.setItem(STORAGE_KEY, newTheme)
   }, [])
 
   return { theme, resolvedTheme, setTheme }

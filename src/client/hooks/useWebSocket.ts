@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
-// 全局变量，确保整个应用只有一个 WebSocket 实例
 let globalWs: WebSocket | null = null
 let globalCallbacks: Set<(data: WSMessage) => void> = new Set()
+let globalStatus: WSStatus = 'disconnected'
+let statusListeners: Set<(status: WSStatus) => void> = new Set()
 
 interface WSMessage {
   type: string
@@ -12,6 +13,11 @@ interface WSMessage {
 
 type WSStatus = 'connecting' | 'connected' | 'disconnected'
 
+function setStatus(status: WSStatus) {
+  globalStatus = status
+  statusListeners.forEach(cb => cb(status))
+}
+
 function createGlobalWebSocket() {
   if (globalWs?.readyState === WebSocket.OPEN || globalWs?.readyState === WebSocket.CONNECTING) {
     return
@@ -20,19 +26,18 @@ function createGlobalWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const wsUrl = `${protocol}//${window.location.host}/ws`
 
+  setStatus('connecting')
   const ws = new WebSocket(wsUrl)
   globalWs = ws
 
   ws.onopen = () => {
-    // broadcast to all listeners
+    setStatus('connected')
   }
 
   ws.onclose = () => {
     globalWs = null
-    // 3秒后重连
-    setTimeout(() => {
-      createGlobalWebSocket()
-    }, 3000)
+    setStatus('disconnected')
+    setTimeout(() => createGlobalWebSocket(), 3000)
   }
 
   ws.onerror = () => {
@@ -50,42 +55,31 @@ function createGlobalWebSocket() {
 }
 
 export function useWebSocket(onMessage: (data: WSMessage) => void) {
-  const [status, setStatus] = useState<WSStatus>('disconnected')
+  const [status, setStatusState] = useState<WSStatus>(globalStatus)
 
   useEffect(() => {
-    // 添加回调到全局集合
     globalCallbacks.add(onMessage)
-
-    // 创建全局 WebSocket（如果还没有）
-    createGlobalWebSocket()
-
-    // 更新状态
-    if (globalWs?.readyState === WebSocket.OPEN) {
-      setStatus('connected')
-    } else {
-      setStatus('connecting')
-      const checkStatus = setInterval(() => {
-        if (globalWs?.readyState === WebSocket.OPEN) {
-          setStatus('connected')
-          clearInterval(checkStatus)
-        }
-      }, 100)
-      // 5秒后清除检查
-      setTimeout(() => clearInterval(checkStatus), 5000)
+    statusListeners.add(setStatusState)
+    
+    setStatusState(globalStatus)
+    
+    if (!globalWs || (globalWs.readyState !== WebSocket.OPEN && globalWs.readyState !== WebSocket.CONNECTING)) {
+      createGlobalWebSocket()
     }
 
     return () => {
       globalCallbacks.delete(onMessage)
+      statusListeners.delete(setStatusState)
     }
   }, [onMessage])
 
-  const reconnect = () => {
+  const reconnect = useCallback(() => {
     if (globalWs) {
       globalWs.close()
       globalWs = null
     }
     createGlobalWebSocket()
-  }
+  }, [])
 
   return { status, reconnect }
 }

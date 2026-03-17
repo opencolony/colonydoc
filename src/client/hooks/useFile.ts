@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 
 interface UseFileOptions {
   onSave?: () => void
+  onSaveStart?: () => void
   onError?: (error: Error) => void
 }
 
@@ -11,6 +12,9 @@ export function useFile(options: UseFileOptions = {}) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const saveTimeoutRef = useRef<number | null>(null)
   const lastSavedContentRef = useRef<string>('')
+  
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   const load = useCallback(async (filePath: string) => {
     try {
@@ -22,14 +26,15 @@ export function useFile(options: UseFileOptions = {}) {
       lastSavedContentRef.current = text
       setStatus('idle')
     } catch (e) {
-      options.onError?.(e instanceof Error ? e : new Error('Unknown error'))
+      optionsRef.current.onError?.(e instanceof Error ? e : new Error('Unknown error'))
     }
-  }, [options])
+  }, [])
 
   const save = useCallback(async (newContent: string, filePath: string | null = path) => {
     if (!filePath) return
 
     setStatus('saving')
+    optionsRef.current.onSaveStart?.()
     try {
       const res = await fetch(`/api/files${filePath}`, {
         method: 'POST',
@@ -38,12 +43,12 @@ export function useFile(options: UseFileOptions = {}) {
       if (!res.ok) throw new Error('Failed to save')
       setStatus('saved')
       lastSavedContentRef.current = newContent
-      options.onSave?.()
+      optionsRef.current.onSave?.()
     } catch (e) {
       setStatus('error')
-      options.onError?.(e instanceof Error ? e : new Error('Unknown error'))
+      optionsRef.current.onError?.(e instanceof Error ? e : new Error('Unknown error'))
     }
-  }, [path, options])
+  }, [path])
 
   const updateContent = useCallback((newContent: string, debounceMs: number = 300) => {
     setContent(newContent)

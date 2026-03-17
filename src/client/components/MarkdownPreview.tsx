@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { XMarkdown } from '@ant-design/x-markdown'
 import { Mermaid as AntdMermaid, CodeHighlighter } from '@ant-design/x'
 import Latex from '@ant-design/x-markdown/plugins/Latex'
@@ -19,7 +19,7 @@ function CodeBlock({ children, lang, block, ...props }: React.HTMLAttributes<HTM
   return <code {...props}>{children}</code>
 }
 
-export function MarkdownPreview({ content }: MarkdownPreviewProps) {
+const MarkdownPreview = memo(function MarkdownPreview({ content }: MarkdownPreviewProps) {
   return (
     <div className="preview-pane">
       <XMarkdown 
@@ -33,4 +33,6 @@ export function MarkdownPreview({ content }: MarkdownPreviewProps) {
       />
     </div>
   )
-}
+})
+
+export default MarkdownPreview

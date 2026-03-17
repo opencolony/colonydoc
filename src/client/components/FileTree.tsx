@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { FolderOpenFilled, FolderFilled, FileFilled, DeleteOutlined } from '@ant-design/icons'
 
 interface FileNode {
@@ -23,7 +23,14 @@ interface TreeNodeProps {
   onDelete: (path: string) => void
 }
 
-function TreeNode({ node, activePath, onSelect, onDelete }: TreeNodeProps) {
+const EMPTY_STATE = (
+  <div className="empty-state" style={{ padding: 24 }}>
+    <div className="empty-state-icon"><FolderOpenFilled /></div>
+    <div>暂无文件</div>
+  </div>
+)
+
+const TreeNode = memo(function TreeNode({ node, activePath, onSelect, onDelete }: TreeNodeProps) {
   const [expanded, setExpanded] = React.useState(true)
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath
@@ -71,16 +78,13 @@ function TreeNode({ node, activePath, onSelect, onDelete }: TreeNodeProps) {
       )}
     </div>
   )
-}
+})
 
-export function FileTree({ files, activePath, currentDir, onSelect, onDelete }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, activePath, currentDir, onSelect, onDelete }: FileTreeProps) {
   return (
     <div className="sidebar-content">
       {files.length === 0 ? (
-        <div className="empty-state" style={{ padding: 24 }}>
-          <div className="empty-state-icon"><FolderOpenFilled /></div>
-          <div>暂无文件</div>
-        </div>
+        EMPTY_STATE
       ) : (
         files.map((node) => (
           <TreeNode
@@ -94,4 +98,4 @@ export function FileTree({ files, activePath, currentDir, onSelect, onDelete }: 
       )}
     </div>
   )
-}
+})

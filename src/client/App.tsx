@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react'
 import { Popup } from 'antd-mobile'
 import { PlusOutlined, EyeOutlined, EditOutlined, UnorderedListOutlined, FileTextOutlined } from '@ant-design/icons'
 import { useTheme } from './hooks/useTheme'
@@ -6,9 +6,10 @@ import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
 import { MarkdownEditor } from './components/MarkdownEditor'
-import { MarkdownPreview } from './components/MarkdownPreview'
 import { ThemeToggle } from './components/ThemeToggle'
 import { CreateFileModal } from './components/CreateFileModal'
+
+const MarkdownPreview = lazy(() => import('./components/MarkdownPreview'))
 
 interface FileNode {
   name: string
@@ -26,6 +27,8 @@ function App() {
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('split')
   const [currentDir, setCurrentDir] = useState('')
 
+  const [isSaving, setIsSaving] = useState(false)
+
   const {
     content,
     path,
@@ -34,7 +37,12 @@ function App() {
     updateContent,
     save,
   } = useFile({
-    onError: (e) => console.error(e),
+    onSaveStart: () => setIsSaving(true),
+    onSave: () => setIsSaving(false),
+    onError: (e) => {
+      setIsSaving(false)
+      console.error(e)
+    },
   })
 
   useEffect(() => {
@@ -69,13 +77,10 @@ function App() {
   }, [fetchFiles])
 
   useWebSocket(useCallback((data) => {
-    if (data.type === 'file:change') {
+    if (data.type === 'file:change' && !isSaving) {
       fetchFiles()
-      if (path === data.path && data.event === 'change') {
-        load(data.path)
-      }
     }
-  }, [fetchFiles, path, load]))
+  }, [fetchFiles, isSaving]))
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory') => {
     if (type === 'file') {
@@ -263,7 +268,9 @@ function App() {
                         <span>预览</span>
                       </div>
                     )}
-                    <MarkdownPreview content={content} />
+                    <Suspense fallback={<div className="preview-pane loading">加载中...</div>}>
+                      <MarkdownPreview content={content} />
+                    </Suspense>
                   </div>
                 )}
               </>

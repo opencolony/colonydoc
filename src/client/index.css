@@ -305,6 +305,13 @@ body {
   font-size: 48px;
 }
 
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
 .icon-btn {
   background: none;
   border: none;
