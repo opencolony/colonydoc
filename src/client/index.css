@@ -84,7 +84,26 @@ body {
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 8px 0;
+}
+
+.sidebar-content::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
 }
 
 .content {
@@ -153,13 +172,18 @@ body {
   background-color: var(--color-bg);
 }
 
+.tree-node {
+}
+
 .file-tree-item {
   display: flex;
   align-items: center;
-  padding: 6px 16px;
+  padding: 8px 12px;
+  min-height: 36px;
   cursor: pointer;
+  gap: 6px;
   font-size: 14px;
-  gap: 8px;
+  white-space: nowrap;
 }
 
 .file-tree-item:hover {
@@ -170,12 +194,52 @@ body {
   background-color: var(--color-active);
 }
 
-.file-tree-directory {
-  padding-left: 8px;
+.tree-icon {
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+.tree-delete {
+  padding: 4px;
+  font-size: 12px;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.file-tree-item:hover .tree-delete {
+  opacity: 1;
 }
 
 .file-tree-children {
-  padding-left: 16px;
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .file-tree-item {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 16px;
+  }
+
+  .tree-delete {
+    opacity: 1;
+  }
+
+  .file-tree-children {
+    margin-left: 16px;
+    padding-left: 10px;
+  }
 }
 
 .save-status {

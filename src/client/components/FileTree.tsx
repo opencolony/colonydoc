@@ -18,26 +18,19 @@ interface FileTreeProps {
 interface TreeNodeProps {
   node: FileNode
   activePath: string | null
-  currentDir: string
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
-  level?: number
 }
 
-function TreeNode({ node, activePath, currentDir, onSelect, onDelete, level = 0 }: TreeNodeProps) {
+function TreeNode({ node, activePath, onSelect, onDelete }: TreeNodeProps) {
   const [expanded, setExpanded] = React.useState(true)
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath
-  const isCurrentDir = node.path === currentDir
 
-  const handleToggle = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleClick = () => {
     if (isDirectory) {
       setExpanded(!expanded)
     }
-  }
-
-  const handleClick = () => {
     onSelect(node.path, isDirectory ? 'directory' : 'file')
   }
 
@@ -49,22 +42,16 @@ function TreeNode({ node, activePath, currentDir, onSelect, onDelete, level = 0 
   }
 
   return (
-    <div>
+    <div className="tree-node">
       <div
-        className={`file-tree-item ${isActive || isCurrentDir ? 'active' : ''}`}
-        style={{ paddingLeft: 16 + level * 16 }}
+        className={`file-tree-item ${isActive ? 'active' : ''}`}
         onClick={handleClick}
       >
-        <span 
-          style={{ width: 16, textAlign: 'center', cursor: isDirectory ? 'pointer' : 'default' }}
-          onClick={handleToggle}
-        >
+        <span className="tree-icon">
           {isDirectory ? (expanded ? '📂' : '📁') : '📄'}
         </span>
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {node.name}
-        </span>
-        <button className="icon-btn" onClick={handleDelete} style={{ padding: 2, fontSize: 12 }}>
+        <span className="tree-name">{node.name}</span>
+        <button className="icon-btn tree-delete" onClick={handleDelete}>
           🗑️
         </button>
       </div>
@@ -75,10 +62,8 @@ function TreeNode({ node, activePath, currentDir, onSelect, onDelete, level = 0 
               key={child.path}
               node={child}
               activePath={activePath}
-              currentDir={currentDir}
               onSelect={onSelect}
               onDelete={onDelete}
-              level={level + 1}
             />
           ))}
         </div>
@@ -101,7 +86,6 @@ export function FileTree({ files, activePath, currentDir, onSelect, onDelete }: 
             key={node.path}
             node={node}
             activePath={activePath}
-            currentDir={currentDir}
             onSelect={onSelect}
             onDelete={onDelete}
           />
