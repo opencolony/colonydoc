@@ -28,8 +28,7 @@ export function useTheme() {
   useEffect(() => {
     const resolved = theme === 'system' ? getSystemTheme() : theme
     setResolvedTheme(resolved)
-    document.documentElement.setAttribute('data-theme', resolved)
-    document.documentElement.setAttribute('data-prefers-color-scheme', resolved)
+    document.documentElement.classList.toggle('dark', resolved === 'dark')
   }, [theme])
 
   useEffect(() => {
@@ -38,8 +37,7 @@ export function useTheme() {
       if (theme === 'system') {
         const resolved = getSystemTheme()
         setResolvedTheme(resolved)
-        document.documentElement.setAttribute('data-theme', resolved)
-        document.documentElement.setAttribute('data-prefers-color-scheme', resolved)
+        document.documentElement.classList.toggle('dark', resolved === 'dark')
       }
     }
     media.addEventListener('change', handler)

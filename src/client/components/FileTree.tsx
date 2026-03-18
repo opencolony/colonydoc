@@ -1,5 +1,26 @@
-import React, { memo } from 'react'
-import { FolderOpenFilled, FolderFilled, FileFilled, DeleteOutlined } from '@ant-design/icons'
+import { memo, useState } from 'react'
+import { ChevronRight, File, Folder, Trash2 } from 'lucide-react'
+import { cn } from '@/client/lib/utils'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible'
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+} from './ui/sidebar'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog'
 
 interface FileNode {
   name: string
@@ -16,86 +37,159 @@ interface FileTreeProps {
   onDelete: (path: string) => void
 }
 
-interface TreeNodeProps {
+function TreeNode({ node, activePath, onSelect, onDelete }: {
   node: FileNode
   activePath: string | null
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
+}) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const isDirectory = node.type === 'directory'
+  const isActive = node.path === activePath
+
+  if (!isDirectory) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          isActive={isActive}
+          className="data-[active=true]:bg-transparent group"
+          onClick={() => onSelect(node.path, 'file')}
+        >
+          <File className="size-4 shrink-0" />
+          <span className="flex-1 whitespace-nowrap">{node.name}</span>
+        </SidebarMenuButton>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setDeleteDialogOpen(true)
+          }}
+          className="absolute right-1 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除</AlertDialogTitle>
+              <AlertDialogDescription>
+                确定要删除 {node.name} 吗？此操作无法撤销。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onDelete(node.path)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                删除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SidebarMenuItem>
+    )
+  }
+
+  return (
+    <SidebarMenuItem>
+      <Collapsible
+        className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
+        defaultOpen={isActive}
+      >
+        <div className="flex items-center">
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton
+              isActive={isActive}
+              className="data-[active=true]:bg-transparent group flex-1"
+            >
+              <ChevronRight className="size-4 shrink-0 transition-transform" />
+              <Folder className="size-4 shrink-0" />
+              <span className="flex-1 whitespace-nowrap">{node.name}</span>
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <button
+            onClick={() => setDeleteDialogOpen(true)}
+            className="size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除</AlertDialogTitle>
+              <AlertDialogDescription>
+                确定要删除 {node.name} 吗？此操作无法撤销。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onDelete(node.path)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                删除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {node.children?.map((child) => (
+              <TreeNode
+                key={child.path}
+                node={child}
+                activePath={activePath}
+                onSelect={onSelect}
+                onDelete={onDelete}
+              />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuItem>
+  )
 }
 
 const EMPTY_STATE = (
-  <div className="empty-state" style={{ padding: 24 }}>
-    <div className="empty-state-icon"><FolderOpenFilled /></div>
+  <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6">
+    <Folder className="size-12 mb-4 opacity-50" />
     <div>暂无文件</div>
   </div>
 )
 
-const TreeNode = memo(function TreeNode({ node, activePath, onSelect, onDelete }: TreeNodeProps) {
-  const [expanded, setExpanded] = React.useState(true)
-  const isDirectory = node.type === 'directory'
-  const isActive = node.path === activePath
-
-  const handleClick = () => {
-    if (isDirectory) {
-      setExpanded(!expanded)
-    }
-    onSelect(node.path, isDirectory ? 'directory' : 'file')
-  }
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (confirm(`确定删除 ${node.name} 吗?`)) {
-      onDelete(node.path)
-    }
-  }
-
-  return (
-    <div className="tree-node">
-      <div
-        className={`file-tree-item ${isActive ? 'active' : ''}`}
-        onClick={handleClick}
-      >
-        <span className="tree-icon">
-          {isDirectory ? (expanded ? <FolderOpenFilled /> : <FolderFilled />) : <FileFilled />}
-        </span>
-        <span className="tree-name">{node.name}</span>
-        <button className="icon-btn tree-delete" onClick={handleDelete}>
-          <DeleteOutlined />
-        </button>
-      </div>
-      {isDirectory && expanded && node.children && (
-        <div className="file-tree-children">
-          {node.children.map((child) => (
-            <TreeNode
-              key={child.path}
-              node={child}
-              activePath={activePath}
-              onSelect={onSelect}
-              onDelete={onDelete}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-})
-
 export const FileTree = memo(function FileTree({ files, activePath, currentDir, onSelect, onDelete }: FileTreeProps) {
+  if (files.length === 0) {
+    return (
+      <div className="flex-1 overflow-y-auto">
+        {EMPTY_STATE}
+      </div>
+    )
+  }
+
   return (
-    <div className="sidebar-content">
-      {files.length === 0 ? (
-        EMPTY_STATE
-      ) : (
-        files.map((node) => (
-          <TreeNode
-            key={node.path}
-            node={node}
-            activePath={activePath}
-            onSelect={onSelect}
-            onDelete={onDelete}
-          />
-        ))
-      )}
+    <div className="flex-1 overflow-y-auto overflow-x-auto">
+      <div className="min-w-max">
+        <SidebarGroup>
+          <SidebarGroupLabel>Files</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {files.map((node) => (
+                <TreeNode
+                  key={node.path}
+                  node={node}
+                  activePath={activePath}
+                  onSelect={onSelect}
+                  onDelete={onDelete}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </div>
     </div>
   )
 })

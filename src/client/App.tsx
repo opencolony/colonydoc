@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useEffect, lazy, Suspense, useRef } from 'react'
-import { Popup } from 'antd-mobile'
-import { PlusOutlined, EyeOutlined, EditOutlined, UnorderedListOutlined, FileTextOutlined } from '@ant-design/icons'
+import { useState, useCallback, useEffect, lazy, Suspense, useRef } from 'react'
+import { Plus, Eye, Edit, List, FileText } from 'lucide-react'
 import { useTheme } from './hooks/useTheme'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
@@ -8,6 +7,9 @@ import { FileTree } from './components/FileTree'
 import { MarkdownEditor } from './components/MarkdownEditor'
 import { ThemeToggle } from './components/ThemeToggle'
 import { CreateFileModal } from './components/CreateFileModal'
+import { Button } from './components/ui/button'
+import { Sheet, SheetContent } from './components/ui/sheet'
+import { cn } from './lib/utils'
 
 const MarkdownPreview = lazy(() => import('./components/MarkdownPreview'))
 
@@ -48,7 +50,7 @@ function App() {
   })
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 769)
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
@@ -59,10 +61,6 @@ function App() {
       setViewMode('preview')
     }
   }, [isMobile, viewMode])
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', resolvedTheme)
-  }, [resolvedTheme])
 
   const fetchFiles = useCallback(async () => {
     if (fetchingRef.current) return
@@ -158,109 +156,101 @@ function App() {
     document.title = fileName ? `${fileName} - ColonyDoc` : 'ColonyDoc'
   }, [fileName])
 
+  const SidebarContent = () => (
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <span className="font-semibold text-sm">ColonyDoc</span>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setCreateModalVisible(true)} title="新建">
+            <Plus className="size-4" />
+          </Button>
+          <ThemeToggle />
+        </div>
+      </div>
+      <FileTree
+        files={files}
+        activePath={path}
+        currentDir={currentDir}
+        onSelect={handleSelectFile}
+        onDelete={handleDeleteFile}
+      />
+    </>
+  )
+
   return (
-    <div className="app">
+    <div className="flex flex-col h-full">
       {isMobile && (
-        <div className="mobile-header">
-          <button className="icon-btn" onClick={() => setDrawerVisible(true)}>
-            ☰
-          </button>
-          <div className="mobile-header-title">
+        <header className="flex items-center px-4 py-3 border-b border-border bg-background md:hidden">
+          <Button variant="ghost" size="icon" onClick={() => setDrawerVisible(true)}>
+            <List className="size-5" />
+          </Button>
+          <div className="flex-1 text-base font-semibold text-center truncate mx-4">
             {fileName || 'ColonyDoc'}
           </div>
-          <button 
-            className="icon-btn view-toggle-btn" 
-            onClick={handleToggleMobileView}
-          >
-            {viewMode === 'edit' ? <EyeOutlined /> : <EditOutlined />}
-          </button>
-        </div>
+          <Button variant="ghost" size="icon" onClick={handleToggleMobileView}>
+            {viewMode === 'edit' ? <Eye className="size-5" /> : <Edit className="size-5" />}
+          </Button>
+        </header>
       )}
 
-      <div className="app-main">
+      <div className="flex flex-1 overflow-hidden">
         {isMobile ? (
-          <Popup
-            visible={drawerVisible}
-            onMaskClick={() => setDrawerVisible(false)}
-            position="left"
-            bodyStyle={{ width: '280px', padding: 0 }}
-          >
-            <div className="drawer-content">
-              <div className="drawer-header">
-                <span className="sidebar-title">ColonyDoc</span>
-                <div className="sidebar-actions">
-                  <button className="icon-btn" onClick={() => setCreateModalVisible(true)} title="新建">
-                    <PlusOutlined />
-                  </button>
-                  <ThemeToggle />
-                </div>
-              </div>
-              <FileTree
-                files={files}
-                activePath={path}
-                currentDir={currentDir}
-                onSelect={handleSelectFile}
-                onDelete={handleDeleteFile}
-              />
-            </div>
-          </Popup>
+          <Sheet open={drawerVisible} onOpenChange={setDrawerVisible}>
+            <SheetContent side="left" className="w-[280px] p-0 bg-sidebar">
+              <SidebarContent />
+            </SheetContent>
+          </Sheet>
         ) : (
-          <div className="sidebar">
-            <div className="sidebar-header">
-              <span className="sidebar-title">ColonyDoc</span>
-              <div className="sidebar-actions">
-                <button className="icon-btn" onClick={() => setCreateModalVisible(true)} title="新建">
-                  <PlusOutlined />
-                </button>
-                <ThemeToggle />
-              </div>
-            </div>
-            <FileTree
-              files={files}
-              activePath={path}
-              currentDir={currentDir}
-              onSelect={handleSelectFile}
-              onDelete={handleDeleteFile}
-            />
-          </div>
+          <aside className="hidden md:flex w-[260px] flex-col border-r border-border bg-sidebar">
+            <SidebarContent />
+          </aside>
         )}
 
-        <div className="content">
+        <main className="flex-1 flex flex-col overflow-hidden">
           {!isMobile && path && (
-            <div className="editor-header">
+            <header className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
               <span>{fileName}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className={`save-status ${status}`}>
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-xs",
+                  status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
+                  status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950",
+                  status === 'error' && "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950"
+                )}>
                   {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : status === 'error' ? '保存失败' : ''}
                 </span>
-                <button className="icon-btn" onClick={() => {
+                <Button variant="ghost" size="icon" className="size-8" onClick={() => {
                   setViewMode(prev => prev === 'split' ? 'edit' : prev === 'edit' ? 'preview' : 'split')
                 }}>
-                  {viewMode === 'split' ? <EyeOutlined /> : viewMode === 'edit' ? <UnorderedListOutlined /> : <EditOutlined />}
-                </button>
+                  {viewMode === 'split' ? <Eye className="size-4" /> : viewMode === 'edit' ? <List className="size-4" /> : <Edit className="size-4" />}
+                </Button>
               </div>
-            </div>
+            </header>
           )}
 
-          <div className="editor-container">
+          <div className="flex flex-1 overflow-hidden">
             {!path ? (
-              <div className="empty-state">
-                <div className="empty-state-icon"><FileTextOutlined /></div>
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6 flex-1">
+                <FileText className="size-12 mb-4 opacity-50" />
                 <div>选择一个文件开始编辑</div>
               </div>
             ) : (
               <>
                 {showEditor && (
-                  <div className="editor-pane">
+                  <div className={cn("flex flex-col flex-1 min-w-0 border-r border-border last:border-r-0")}>
                     {isMobile && (
-                      <div className="editor-header">
+                      <header className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
                         <span>编辑</span>
-                        <span className={`save-status ${status}`}>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded text-xs",
+                          status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
+                          status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950"
+                        )}>
                           {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : ''}
                         </span>
-                      </div>
+                      </header>
                     )}
-                    <div className="editor-body">
+                    <div className="flex-1 overflow-hidden">
                       <MarkdownEditor
                         value={content}
                         onChange={updateContent}
@@ -269,13 +259,13 @@ function App() {
                   </div>
                 )}
                 {showPreview && (
-                  <div className="editor-pane">
+                  <div className={cn("flex flex-col flex-1 min-w-0 border-r border-border last:border-r-0")}>
                     {isMobile && (
-                      <div className="editor-header">
+                      <header className="px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
                         <span>预览</span>
-                      </div>
+                      </header>
                     )}
-                    <Suspense fallback={<div className="preview-pane loading">加载中...</div>}>
+                    <Suspense fallback={<div className="flex items-center justify-center text-muted-foreground flex-1">加载中...</div>}>
                       <MarkdownPreview content={content} />
                     </Suspense>
                   </div>
@@ -283,7 +273,7 @@ function App() {
               </>
             )}
           </div>
-        </div>
+        </main>
       </div>
 
       <CreateFileModal

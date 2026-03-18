@@ -1,6 +1,6 @@
-import React from 'react'
-import { SunOutlined, MoonOutlined, DesktopOutlined } from '@ant-design/icons'
+import { Sun, Moon, Monitor } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
+import { Button } from './ui/button'
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -11,8 +11,8 @@ export function ThemeToggle() {
   }
 
   return (
-    <button className="icon-btn" onClick={cycleTheme} title={`当前: ${theme}`}>
-      {theme === 'light' ? <SunOutlined /> : theme === 'dark' ? <MoonOutlined /> : <DesktopOutlined />}
-    </button>
+    <Button variant="ghost" size="icon" onClick={cycleTheme} title={`当前: ${theme}`}>
+      {theme === 'light' ? <Sun className="size-4" /> : theme === 'dark' ? <Moon className="size-4" /> : <Monitor className="size-4" />}
+    </Button>
   )
 }

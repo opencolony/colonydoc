@@ -1,5 +1,8 @@
-import React, { useState, memo } from 'react'
-import { Popup, Input, Button, Space } from 'antd-mobile'
+import { useState, memo } from 'react'
+import { Folder, FileText } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 
 interface CreateFileModalProps {
   visible: boolean
@@ -7,10 +10,6 @@ interface CreateFileModalProps {
   onCreate: (name: string, isDirectory: boolean) => void
   currentDir: string
 }
-
-const POPUP_BODY_STYLE: React.CSSProperties = { borderRadius: '16px 16px 0 0' }
-const INPUT_STYLE: React.CSSProperties = { '--font-size': '16px' } as React.CSSProperties
-const SPACE_STYLE: React.CSSProperties = { width: '100%', justifyContent: 'flex-end' }
 
 export const CreateFileModal = memo(function CreateFileModal({ visible, onClose, onCreate, currentDir }: CreateFileModalProps) {
   const [name, setName] = useState('')
@@ -26,47 +25,45 @@ export const CreateFileModal = memo(function CreateFileModal({ visible, onClose,
   }
 
   return (
-    <Popup
-      visible={visible}
-      onMaskClick={onClose}
-      bodyStyle={POPUP_BODY_STYLE}
-    >
-      <div style={{ padding: 20 }}>
-        <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>新建</h3>
-        <div style={{ margin: '0 0 12px 0', fontSize: 12, color: '#999' }}>
-          位置: {currentDir || '根目录'}
-        </div>
-        <Input
-          placeholder={isDirectory ? '文件夹名称' : '文件名称 (自动添加 .md)'}
-          value={name}
-          onChange={setName}
-          style={INPUT_STYLE}
-        />
-        <div style={{ margin: '16px 0' }}>
-          <Space>
+    <Sheet open={visible} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="bottom" className="rounded-t-2xl" noClose>
+        <SheetHeader className="text-left">
+          <SheetTitle>新建</SheetTitle>
+          <SheetDescription>
+            位置: {currentDir || '根目录'}
+          </SheetDescription>
+        </SheetHeader>
+        <div className="space-y-4 mt-4">
+          <Input
+            placeholder={isDirectory ? '文件夹名称' : '文件名称 (自动添加 .md)'}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-11"
+          />
+          <div className="flex gap-2">
             <Button
-              size="small"
-              color={isDirectory ? 'primary' : 'default'}
+              variant={isDirectory ? 'default' : 'outline'}
               onClick={() => setIsDirectory(true)}
+              className="flex-1 h-11"
             >
+              <Folder className="size-4 mr-2" />
               文件夹
             </Button>
             <Button
-              size="small"
-              color={!isDirectory ? 'primary' : 'default'}
+              variant={!isDirectory ? 'default' : 'outline'}
               onClick={() => setIsDirectory(false)}
+              className="flex-1 h-11"
             >
-              Markdown 文件
+              <FileText className="size-4 mr-2" />
+              Markdown
             </Button>
-          </Space>
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" onClick={onClose}>取消</Button>
+            <Button onClick={handleSubmit}>创建</Button>
+          </div>
         </div>
-        <Space style={SPACE_STYLE}>
-          <Button onClick={onClose}>取消</Button>
-          <Button color="primary" onClick={handleSubmit}>
-            创建
-          </Button>
-        </Space>
-      </div>
-    </Popup>
+      </SheetContent>
+    </Sheet>
   )
 })
