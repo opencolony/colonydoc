@@ -51,6 +51,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath
   const isExpanded = expandedPaths.has(node.path)
+  const canDelete = !isDirectory || !node.children || node.children.length === 0
 
   if (!isDirectory) {
     return (
@@ -63,15 +64,17 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           <File className="size-4 shrink-0" />
           <span className="flex-1 whitespace-nowrap">{node.name}</span>
         </SidebarMenuButton>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            setDeleteDialogOpen(true)
-          }}
-          className="absolute right-1 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
+        {canDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setDeleteDialogOpen(true)
+            }}
+            className="absolute right-1 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover/menu-item:opacity-100 transition-opacity"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        )}
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
@@ -124,12 +127,14 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
               <span className="flex-1 whitespace-nowrap">{node.name}</span>
             </SidebarMenuButton>
           </CollapsibleTrigger>
-          <button
-            onClick={() => setDeleteDialogOpen(true)}
-            className="size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
+          {canDelete && (
+            <button
+              onClick={() => setDeleteDialogOpen(true)}
+              className="size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover/menu-item:opacity-100 transition-opacity"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          )}
         </div>
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
