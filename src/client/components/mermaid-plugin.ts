@@ -69,6 +69,50 @@ function initMermaid(dark: boolean) {
       startOnLoad: false,
       theme: 'default',
       htmlLabels: false,
+      themeVariables: {
+        background: 'transparent',
+        primaryColor: '#e0e7ff',
+        primaryTextColor: '#1e1b4b',
+        primaryBorderColor: '#6366f1',
+        secondaryColor: '#dbeafe',
+        secondaryTextColor: '#1e3a5f',
+        secondaryBorderColor: '#3b82f6',
+        tertiaryColor: '#ede9fe',
+        tertiaryTextColor: '#3b0764',
+        tertiaryBorderColor: '#8b5cf6',
+        lineColor: '#64748b',
+        textColor: '#1e293b',
+        mainBkg: '#ffffff',
+        nodeBorder: '#6366f1',
+        clusterBkg: '#f1f5f9',
+        clusterBorder: '#cbd5e1',
+        titleColor: '#1e293b',
+        edgeLabelBackground: '#ffffff',
+        nodeTextColor: '#1e293b',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      },
+      themeCSS: `
+        .node rect, .node circle, .node ellipse, .node polygon, .node path {
+          stroke: #6366f1 !important;
+        }
+        .node .label, .nodeLabel {
+          color: #1e293b !important;
+        }
+        .edgeLabel {
+          background-color: #ffffff !important;
+          color: #1e293b !important;
+        }
+        .edgePath .path {
+          stroke: #64748b !important;
+        }
+        .arrowheadPath {
+          fill: #64748b !important;
+        }
+        text {
+          color: #1e293b !important;
+          fill: #1e293b !important;
+        }
+      `,
       securityLevel: 'loose',
     })
   }
