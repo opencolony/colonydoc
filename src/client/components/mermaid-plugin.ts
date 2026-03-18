@@ -3,41 +3,76 @@ import { codeBlockConfig, type CodeBlockConfig } from '@milkdown/kit/component/c
 import { Editor } from '@milkdown/kit/core'
 import { codeBlockSchema } from '@milkdown/kit/preset/commonmark'
 
-type MermaidTheme = 'default' | 'dark' | 'base'
+let currentDarkMode = false
 
-let currentTheme: MermaidTheme = 'default'
-
-function getMermaidTheme(): MermaidTheme {
-  if (typeof document === 'undefined') return 'default'
-  return document.documentElement.classList.contains('dark') ? 'base' : 'default'
+function isDarkMode(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.documentElement.classList.contains('dark')
 }
 
-function initMermaid(theme: MermaidTheme) {
-  if (theme === 'base') {
+function initMermaid(dark: boolean) {
+  if (dark) {
     mermaid.initialize({
       startOnLoad: false,
       theme: 'base',
+      darkMode: true,
+      htmlLabels: false,
       themeVariables: {
-        darkMode: true,
         background: 'transparent',
-        primaryColor: '#6366f1',
-        primaryTextColor: '#ffffff',
+        primaryColor: '#4f46e5',
+        primaryTextColor: '#f8fafc',
         primaryBorderColor: '#818cf8',
-        lineColor: '#94a3b8',
         secondaryColor: '#3b82f6',
+        secondaryTextColor: '#f8fafc',
+        secondaryBorderColor: '#60a5fa',
         tertiaryColor: '#8b5cf6',
+        tertiaryTextColor: '#f8fafc',
+        tertiaryBorderColor: '#a78bfa',
+        lineColor: '#94a3b8',
+        textColor: '#f8fafc',
+        mainBkg: '#374151',
+        nodeBorder: '#6366f1',
+        clusterBkg: '#1f2937',
+        clusterBorder: '#4b5563',
+        titleColor: '#f8fafc',
+        edgeLabelBackground: '#1f2937',
+        nodeTextColor: '#f8fafc',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       },
+      themeCSS: `
+        .node rect, .node circle, .node ellipse, .node polygon, .node path {
+          fill: #374151 !important;
+          stroke: #6366f1 !important;
+        }
+        .node .label, .nodeLabel {
+          color: #f8fafc !important;
+        }
+        .edgeLabel {
+          background-color: #1f2937 !important;
+          color: #f8fafc !important;
+        }
+        .edgePath .path {
+          stroke: #94a3b8 !important;
+        }
+        .arrowheadPath {
+          fill: #94a3b8 !important;
+        }
+        text {
+          color: #f8fafc !important;
+          fill: #f8fafc !important;
+        }
+      `,
       securityLevel: 'loose',
     })
   } else {
     mermaid.initialize({
       startOnLoad: false,
       theme: 'default',
+      htmlLabels: false,
       securityLevel: 'loose',
     })
   }
-  currentTheme = theme
+  currentDarkMode = dark
 }
 
 async function renderMermaid(content: string): Promise<string> {
@@ -46,9 +81,9 @@ async function renderMermaid(content: string): Promise<string> {
   }
 
   try {
-    const theme = getMermaidTheme()
-    if (theme !== currentTheme) {
-      initMermaid(theme)
+    const dark = isDarkMode()
+    if (dark !== currentDarkMode) {
+      initMermaid(dark)
     }
     
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
