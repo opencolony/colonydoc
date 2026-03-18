@@ -3,17 +3,20 @@ import { codeBlockConfig, type CodeBlockConfig } from '@milkdown/kit/component/c
 import { Editor } from '@milkdown/kit/core'
 import { codeBlockSchema } from '@milkdown/kit/preset/commonmark'
 
-let mermaidInitialized = false
+let currentTheme: 'default' | 'dark' = 'default'
 
-function initMermaid() {
-  if (!mermaidInitialized) {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: 'default',
-      securityLevel: 'loose',
-    })
-    mermaidInitialized = true
-  }
+function getMermaidTheme(): 'default' | 'dark' {
+  if (typeof document === 'undefined') return 'default'
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'default'
+}
+
+function initMermaid(theme: 'default' | 'dark') {
+  mermaid.initialize({
+    startOnLoad: false,
+    theme,
+    securityLevel: 'loose',
+  })
+  currentTheme = theme
 }
 
 async function renderMermaid(content: string): Promise<string> {
@@ -22,7 +25,11 @@ async function renderMermaid(content: string): Promise<string> {
   }
 
   try {
-    initMermaid()
+    const theme = getMermaidTheme()
+    if (theme !== currentTheme) {
+      initMermaid(theme)
+    }
+    
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const { svg } = await mermaid.render(id, content)
     return svg
