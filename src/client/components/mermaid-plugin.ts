@@ -67,7 +67,8 @@ function initMermaid(dark: boolean) {
   } else {
     mermaid.initialize({
       startOnLoad: false,
-      theme: 'default',
+      theme: 'base',
+      darkMode: false,
       htmlLabels: false,
       themeVariables: {
         background: 'transparent',
