@@ -39,8 +39,8 @@ const SidebarContent = memo(function SidebarContent({
   onDelete,
 }: SidebarContentProps) {
   return (
-    <>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <span className="font-semibold text-sm">ColonyDoc</span>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={onCreateClick} title="新建">
@@ -58,7 +58,7 @@ const SidebarContent = memo(function SidebarContent({
         onSelect={onSelect}
         onDelete={onDelete}
       />
-    </>
+    </div>
   )
 })
 
