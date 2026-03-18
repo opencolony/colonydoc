@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, memo } from 'react'
 import { Plus, Code, Eye, List, FileText } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
@@ -16,6 +16,51 @@ interface FileNode {
   type: 'file' | 'directory'
   children?: FileNode[]
 }
+
+interface SidebarContentProps {
+  onCreateClick: () => void
+  files: FileNode[]
+  activePath: string | null
+  currentDir: string
+  expandedPaths: Set<string>
+  setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
+  onSelect: (path: string, type: 'file' | 'directory') => void
+  onDelete: (path: string) => void
+}
+
+const SidebarContent = memo(function SidebarContent({
+  onCreateClick,
+  files,
+  activePath,
+  currentDir,
+  expandedPaths,
+  setExpandedPaths,
+  onSelect,
+  onDelete,
+}: SidebarContentProps) {
+  return (
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <span className="font-semibold text-sm">ColonyDoc</span>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={onCreateClick} title="新建">
+            <Plus className="size-4" />
+          </Button>
+          <ThemeToggle />
+        </div>
+      </div>
+      <FileTree
+        files={files}
+        activePath={activePath}
+        currentDir={currentDir}
+        expandedPaths={expandedPaths}
+        setExpandedPaths={setExpandedPaths}
+        onSelect={onSelect}
+        onDelete={onDelete}
+      />
+    </>
+  )
+})
 
 function App() {
   const [files, setFiles] = useState<FileNode[]>([])
@@ -163,29 +208,6 @@ function App() {
     document.title = fileName ? `${fileName} - ColonyDoc` : 'ColonyDoc'
   }, [fileName])
 
-  const SidebarContent = () => (
-    <>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <span className="font-semibold text-sm">ColonyDoc</span>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setCreateModalVisible(true)} title="新建">
-            <Plus className="size-4" />
-          </Button>
-          <ThemeToggle />
-        </div>
-      </div>
-      <FileTree
-        files={files}
-        activePath={path}
-        currentDir={currentDir}
-        expandedPaths={expandedPaths}
-        setExpandedPaths={setExpandedPaths}
-        onSelect={handleSelectFile}
-        onDelete={handleDeleteFile}
-      />
-    </>
-  )
-
   return (
     <div className="flex flex-col h-full">
       {isMobile && (
@@ -206,12 +228,30 @@ function App() {
         {isMobile ? (
           <Sheet open={drawerVisible} onOpenChange={setDrawerVisible}>
             <SheetContent side="left" className="w-[280px] p-0 bg-sidebar">
-              <SidebarContent />
+              <SidebarContent
+                onCreateClick={() => setCreateModalVisible(true)}
+                files={files}
+                activePath={path}
+                currentDir={currentDir}
+                expandedPaths={expandedPaths}
+                setExpandedPaths={setExpandedPaths}
+                onSelect={handleSelectFile}
+                onDelete={handleDeleteFile}
+              />
             </SheetContent>
           </Sheet>
         ) : (
           <aside className="hidden md:flex w-[260px] flex-col border-r border-border bg-sidebar">
-            <SidebarContent />
+            <SidebarContent
+              onCreateClick={() => setCreateModalVisible(true)}
+              files={files}
+              activePath={path}
+              currentDir={currentDir}
+              expandedPaths={expandedPaths}
+              setExpandedPaths={setExpandedPaths}
+              onSelect={handleSelectFile}
+              onDelete={handleDeleteFile}
+            />
           </aside>
         )}
 
