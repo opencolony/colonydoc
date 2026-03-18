@@ -1,17 +1,14 @@
-import { useState, useCallback, useEffect, lazy, Suspense, useRef } from 'react'
-import { Plus, Eye, Edit, List, FileText } from 'lucide-react'
-import { useTheme } from './hooks/useTheme'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { Plus, Code, Eye, List, FileText } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
-import { MarkdownEditor } from './components/MarkdownEditor'
+import { MilkdownEditor } from './components/MilkdownEditor'
 import { ThemeToggle } from './components/ThemeToggle'
 import { CreateFileModal } from './components/CreateFileModal'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import { cn } from './lib/utils'
-
-const MarkdownPreview = lazy(() => import('./components/MarkdownPreview'))
 
 interface FileNode {
   name: string
@@ -21,7 +18,6 @@ interface FileNode {
 }
 
 function App() {
-  const { resolvedTheme } = useTheme()
   const [files, setFiles] = useState<FileNode[]>([])
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
@@ -29,7 +25,7 @@ function App() {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
   })
-  const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('split')
+  const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source'>('wysiwyg')
   const [currentDir, setCurrentDir] = useState('')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
@@ -75,12 +71,6 @@ function App() {
       })
     }
   }, [path])
-
-  useEffect(() => {
-    if (isMobile && viewMode === 'split') {
-      setViewMode('preview')
-    }
-  }, [isMobile, viewMode])
 
   const fetchFiles = useCallback(async () => {
     if (fetchingRef.current) return
@@ -163,11 +153,8 @@ function App() {
     }
   }, [save, content, path])
 
-  const showEditor = isMobile ? viewMode === 'edit' : (viewMode === 'edit' || viewMode === 'split')
-  const showPreview = isMobile ? viewMode === 'preview' : (viewMode === 'preview' || viewMode === 'split')
-
-  const handleToggleMobileView = useCallback(() => {
-    setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')
+  const handleToggleEditorMode = useCallback(() => {
+    setEditorMode(prev => prev === 'wysiwyg' ? 'source' : 'wysiwyg')
   }, [])
 
   const fileName = path ? path.split('/').pop() : null
@@ -209,8 +196,8 @@ function App() {
           <div className="flex-1 text-base font-semibold text-center truncate mx-4">
             {fileName || 'ColonyDoc'}
           </div>
-          <Button variant="ghost" size="icon" onClick={handleToggleMobileView}>
-            {viewMode === 'edit' ? <Eye className="size-5" /> : <Edit className="size-5" />}
+          <Button variant="ghost" size="icon" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
+            {editorMode === 'wysiwyg' ? <Code className="size-5" /> : <Eye className="size-5" />}
           </Button>
         </header>
       )}
@@ -241,10 +228,8 @@ function App() {
                 )}>
                   {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : status === 'error' ? '保存失败' : ''}
                 </span>
-                <Button variant="ghost" size="icon" className="size-8" onClick={() => {
-                  setViewMode(prev => prev === 'split' ? 'edit' : prev === 'edit' ? 'preview' : 'split')
-                }}>
-                  {viewMode === 'split' ? <Eye className="size-4" /> : viewMode === 'edit' ? <List className="size-4" /> : <Edit className="size-4" />}
+                <Button variant="ghost" size="icon" className="size-8" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
+                  {editorMode === 'wysiwyg' ? <Code className="size-4" /> : <Eye className="size-4" />}
                 </Button>
               </div>
             </header>
@@ -257,42 +242,28 @@ function App() {
                 <div>选择一个文件开始编辑</div>
               </div>
             ) : (
-              <>
-                {showEditor && (
-                  <div className={cn("flex flex-col flex-1 min-w-0 border-r border-border last:border-r-0")}>
-                    {isMobile && (
-                      <header className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
-                        <span>编辑</span>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-xs",
-                          status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
-                          status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950"
-                        )}>
-                          {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : ''}
-                        </span>
-                      </header>
-                    )}
-                    <div className="flex-1 overflow-hidden">
-                      <MarkdownEditor
-                        value={content}
-                        onChange={updateContent}
-                      />
-                    </div>
-                  </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                {isMobile && (
+                  <header className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
+                    <span>{editorMode === 'wysiwyg' ? '所见即所得' : '源码'}</span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded text-xs",
+                      status === 'saving' && "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
+                      status === 'saved' && "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950"
+                    )}>
+                      {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : ''}
+                    </span>
+                  </header>
                 )}
-                {showPreview && (
-                  <div className={cn("flex flex-col flex-1 min-w-0 border-r border-border last:border-r-0")}>
-                    {isMobile && (
-                      <header className="px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
-                        <span>预览</span>
-                      </header>
-                    )}
-                    <Suspense fallback={<div className="flex items-center justify-center text-muted-foreground flex-1">加载中...</div>}>
-                      <MarkdownPreview content={content} />
-                    </Suspense>
-                  </div>
-                )}
-              </>
+                <div className="flex-1 overflow-hidden">
+                  <MilkdownEditor
+                    key={path}
+                    value={content}
+                    onChange={updateContent}
+                    mode={editorMode}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </main>

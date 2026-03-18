@@ -198,3 +198,106 @@
     transform: translateX(-100%);
   }
 }
+
+/* Milkdown Editor Styles */
+.milkdown-editor-wrapper {
+  @apply w-full h-full;
+  background-color: var(--color-background) !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.milkdown-container {
+  @apply w-full flex-1 overflow-y-auto;
+  background-color: var(--color-background) !important;
+}
+
+.milkdown-container .milkdown {
+  @apply w-full min-h-full;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background) !important;
+  --crepe-color-background: var(--color-background) !important;
+  --crepe-color-on-background: var(--color-foreground) !important;
+  --crepe-color-surface: var(--color-muted) !important;
+  --crepe-color-on-surface: var(--color-foreground) !important;
+  --crepe-color-outline: var(--color-border) !important;
+  --crepe-color-primary: var(--color-primary) !important;
+  --crepe-color-hover: var(--color-accent) !important;
+  --crepe-color-selected: var(--color-muted) !important;
+  --crepe-color-inline-code: oklch(55% 0.2 27) !important;
+}
+
+.milkdown-container .milkdown .ProseMirror {
+  @apply w-full flex-1 p-4 md:p-8;
+  outline: none;
+  min-height: 100%;
+}
+
+.milkdown-container .milkdown .ProseMirror-focused {
+  outline: none;
+}
+
+.milkdown-container .milkdown * {
+  max-width: 100%;
+}
+
+.milkdown-container .milkdown h1 {
+  @apply text-2xl font-bold mb-4;
+}
+
+.milkdown-container .milkdown h2 {
+  @apply text-xl font-bold mb-3;
+}
+
+.milkdown-container .milkdown h3 {
+  @apply text-lg font-semibold mb-2;
+}
+
+.milkdown-container .milkdown p {
+  @apply mb-4 leading-relaxed;
+}
+
+.milkdown-container .milkdown ul,
+.milkdown-container .milkdown ol {
+  @apply pl-6 mb-4;
+}
+
+.milkdown-container .milkdown li {
+  @apply mb-1;
+}
+
+.milkdown-container .milkdown blockquote {
+  @apply pl-4 border-l-4 border-border italic my-4;
+}
+
+.milkdown-container .milkdown code {
+  @apply px-1.5 py-0.5 rounded bg-muted font-mono text-sm;
+}
+
+.milkdown-container .milkdown pre {
+  @apply p-4 rounded-lg bg-muted overflow-x-auto my-4;
+}
+
+.milkdown-container .milkdown pre code {
+  @apply p-0 bg-transparent;
+}
+
+.milkdown-container .milkdown a {
+  @apply text-primary underline;
+}
+
+.milkdown-container .milkdown hr {
+  @apply my-6 border-border;
+}
+
+/* Dark theme for Milkdown */
+.dark .milkdown-container .milkdown {
+  --crepe-color-inline-code: oklch(65% 0.2 27) !important;
+  --crepe-shadow-1: none !important;
+  --crepe-shadow-2: none !important;
+}
+
+.dark .milkdown-container .milkdown .ProseMirror {
+  caret-color: var(--color-foreground);
+}
