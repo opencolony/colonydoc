@@ -18,12 +18,12 @@ function readStoredTheme(): Theme {
   return 'system'
 }
 
-const initialTheme = readStoredTheme()
-const initialResolvedTheme: 'light' | 'dark' = initialTheme === 'system' ? getSystemTheme() : initialTheme
-
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(initialTheme)
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(initialResolvedTheme)
+  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme())
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    const t = readStoredTheme()
+    return t === 'system' ? getSystemTheme() : t
+  })
 
   useEffect(() => {
     const resolved = theme === 'system' ? getSystemTheme() : theme

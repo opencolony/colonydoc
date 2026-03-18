@@ -225,9 +225,17 @@ function App() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        {isMobile ? (
-          <Sheet open={drawerVisible} onOpenChange={setDrawerVisible}>
-            <SheetContent side="left" className="w-[280px] p-0 bg-sidebar">
+        {isMobile && (
+          <>
+            {drawerVisible && (
+              <div className="fixed inset-0 z-50 bg-black/80 animate-fade-in" onClick={() => setDrawerVisible(false)} />
+            )}
+            <aside 
+              className={cn(
+                "fixed z-50 inset-y-0 left-0 w-[280px] bg-sidebar border-r border-sidebar-border p-0 transition-transform duration-150",
+                drawerVisible ? "translate-x-0" : "-translate-x-full"
+              )}
+            >
               <SidebarContent
                 onCreateClick={() => setCreateModalVisible(true)}
                 files={files}
@@ -238,9 +246,11 @@ function App() {
                 onSelect={handleSelectFile}
                 onDelete={handleDeleteFile}
               />
-            </SheetContent>
-          </Sheet>
-        ) : (
+            </aside>
+          </>
+        )}
+
+        {!isMobile && (
           <aside className="hidden md:flex w-[260px] flex-col border-r border-border bg-sidebar">
             <SidebarContent
               onCreateClick={() => setCreateModalVisible(true)}
