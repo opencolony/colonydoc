@@ -29,7 +29,7 @@ function initMermaid(dark: boolean) {
 
 async function renderMermaid(content: string): Promise<string> {
   if (!content.trim()) {
-    return '<div class="mermaid-placeholder" style="padding: 20px; text-align: center; color: #999;">Mermaid Diagram</div>'
+    return '<div class="mermaid-container"><div class="mermaid-placeholder" style="padding: 20px; text-align: center; color: #999;">Mermaid Diagram</div></div>'
   }
 
   try {
@@ -38,9 +38,9 @@ async function renderMermaid(content: string): Promise<string> {
     
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const { svg } = await mermaid.render(id, content)
-    return svg
+    return `<div class="mermaid-container">${svg}</div>`
   } catch (error) {
-    return `<div class="mermaid-error" style="padding: 20px; color: #e74c3c;">Invalid Mermaid syntax</div>`
+    return `<div class="mermaid-container"><div class="mermaid-error" style="padding: 20px; color: #e74c3c;">Invalid Mermaid syntax</div></div>`
   }
 }
 
