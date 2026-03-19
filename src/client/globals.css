@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --color-background: oklch(100% 0 0);
@@ -187,10 +188,6 @@
   height: auto;
 }
 
-.mermaid-error {
-  @apply text-destructive bg-destructive/10 p-4 rounded-lg my-4;
-}
-
 /* TipTap Editor Styles */
 .tiptap-editor-wrapper {
   @apply w-full h-full;
@@ -205,7 +202,7 @@
 }
 
 .tiptap-editor .tiptap {
-  @apply w-full flex-1 p-4 md:p-8;
+  @apply w-full flex-1 p-4 md:p-8 prose prose-slate dark:prose-invert max-w-none;
   outline: none;
   min-height: 100%;
 }
@@ -219,52 +216,103 @@
 }
 
 .tiptap-editor .tiptap h1 {
-  @apply text-2xl font-bold mb-4;
+  @apply text-3xl font-bold mb-6 mt-8 first:mt-0;
+  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-muted-foreground) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .tiptap-editor .tiptap h2 {
-  @apply text-xl font-bold mb-3;
+  @apply text-2xl font-bold mb-4 mt-6 first:mt-0;
+  color: var(--color-foreground);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
 }
 
 .tiptap-editor .tiptap h3 {
-  @apply text-lg font-semibold mb-2;
+  @apply text-xl font-semibold mb-3 mt-5 first:mt-0;
+  color: var(--color-foreground);
 }
 
 .tiptap-editor .tiptap p {
-  @apply mb-4 leading-relaxed;
+  @apply mb-4 leading-relaxed text-[var(--color-foreground)];
 }
 
 .tiptap-editor .tiptap ul,
 .tiptap-editor .tiptap ol {
-  @apply pl-6 mb-4;
+  @apply pl-6 mb-4 my-2;
+}
+
+.tiptap-editor .tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap-editor .tiptap ol {
+  list-style-type: decimal;
 }
 
 .tiptap-editor .tiptap li {
-  @apply mb-1;
+  @apply mb-2 leading-relaxed;
+}
+
+.tiptap-editor .tiptap li::marker {
+  color: var(--color-primary);
 }
 
 .tiptap-editor .tiptap blockquote {
-  @apply pl-4 border-l-4 border-border italic my-4;
+  @apply pl-4 py-2 my-4 rounded-r-lg;
+  border-left: 4px solid var(--color-primary);
+  background: linear-gradient(90deg, oklch(55% 0.22 264 / 0.08) 0%, transparent 100%);
+  font-style: italic;
+}
+
+.tiptap-editor .tiptap blockquote p {
+  @apply m-0;
 }
 
 .tiptap-editor .tiptap code {
-  @apply px-1.5 py-0.5 rounded bg-muted font-mono text-sm;
+  @apply px-2 py-0.5 rounded-md text-sm font-mono;
+  background: var(--color-muted);
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
 }
 
 .tiptap-editor .tiptap pre {
-  @apply p-4 rounded-lg bg-muted overflow-x-auto my-4;
+  @apply p-4 overflow-x-auto m-0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .tiptap-editor .tiptap pre code {
-  @apply p-0 bg-transparent;
+  @apply p-0 bg-transparent border-0;
+  color: var(--color-foreground);
 }
 
 .tiptap-editor .tiptap a {
-  @apply text-primary underline;
+  @apply underline decoration-primary/30 underline-offset-2 transition-colors;
+  color: var(--color-primary);
+}
+
+.tiptap-editor .tiptap a:hover {
+  @apply decoration-primary;
 }
 
 .tiptap-editor .tiptap hr {
-  @apply my-6 border-border;
+  @apply my-8;
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--color-border) 50%, transparent 100%);
+}
+
+.tiptap-editor .tiptap strong {
+  @apply font-bold;
+  color: var(--color-foreground);
+}
+
+.tiptap-editor .tiptap em {
+  @apply italic;
 }
 
 .tiptap-editor .tiptap p.is-editor-empty:first-child::before {
@@ -275,31 +323,61 @@
   height: 0;
 }
 
+.tiptap-editor .tiptap ::selection {
+  background: oklch(55% 0.22 264 / 0.2);
+}
+
 /* Code Block Styles */
 .code-block-wrapper {
-  @apply my-4 rounded-lg bg-muted overflow-hidden;
+  @apply my-4 rounded-xl overflow-hidden;
+  background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 6px -1px oklch(0% 0 0 / 0.05), 0 2px 4px -2px oklch(0% 0 0 / 0.05);
+}
+
+.code-block-wrapper.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px oklch(55% 0.22 264 / 0.2);
 }
 
 .code-block-header {
-  @apply flex items-center justify-between px-4 py-2 bg-muted border-b border-border;
+  @apply flex items-center justify-between px-4 py-2;
+  background: transparent;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .code-block-header select {
-  @apply bg-background text-foreground text-sm rounded px-2 py-1 border border-border;
+  @apply bg-background text-foreground text-sm rounded-md px-3 py-1.5 border border-border;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.code-block-header select:hover {
+  border-color: var(--color-primary);
 }
 
 .code-block {
   @apply p-4 m-0 overflow-x-auto;
   font-family: var(--font-mono);
   font-size: 0.875rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  background: transparent;
+  color: var(--color-foreground);
+}
+
+.code-block code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
 }
 
 /* Mermaid Preview Styles */
 .mermaid-preview {
-  width: 100%;
+  @apply p-4 w-full;
   min-height: 150px;
-  padding: 0.75rem;
+  background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
   position: relative;
 }
 
@@ -322,12 +400,18 @@
 
 @media (min-width: 768px) {
   .mermaid-preview {
-    padding: 1rem;
+    padding: 1.5rem;
   }
 }
 
 .mermaid-loading {
-  @apply text-muted-foreground text-sm;
+  @apply text-muted-foreground text-sm flex items-center justify-center;
+  min-height: 100px;
+}
+
+.mermaid-error {
+  @apply text-destructive bg-destructive/10 p-4 rounded-lg my-4;
+  border: 1px solid var(--color-destructive);
 }
 
 .mermaid-zoom-controls {
@@ -335,7 +419,12 @@
 }
 
 .mermaid-zoom-controls button {
-  @apply px-1.5 py-0.5 text-xs rounded bg-background hover:bg-muted cursor-pointer border border-border select-none;
-  min-width: 28px;
-  min-height: 28px;
+  @apply px-2 py-1 text-sm rounded-md bg-background hover:bg-primary hover:text-primary-foreground cursor-pointer border border-border select-none transition-all;
+  min-width: 32px;
+  min-height: 32px;
+  font-weight: 500;
+}
+
+.mermaid-zoom-controls button:active {
+  transform: scale(0.95);
 }
