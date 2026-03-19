@@ -3,6 +3,12 @@ import { Crepe, type CrepeConfig } from '@milkdown/crepe'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
 import 'katex/dist/katex.min.css'
+import mermaid from 'mermaid'
+
+mermaid.initialize({ 
+  startOnLoad: false, 
+  theme: 'default'
+})
 
 
 interface MilkdownEditorProps {
@@ -44,6 +50,36 @@ export function MilkdownEditor({ value, onChange, mode, placeholder, readOnly }:
       featureConfigs: {
         [Crepe.Feature.Placeholder]: {
           text: placeholder || '在这里输入 Markdown...',
+        },
+        [Crepe.Feature.CodeMirror]: {
+          renderPreview: (language, content, applyPreview) => {
+            if (language === 'mermaid' && content) {
+              const container = document.createElement('div')
+              container.className = 'mermaid'
+              container.style.cssText = 'position:absolute;visibility:hidden;width:800px;height:600px;'
+              container.textContent = content
+              document.body.appendChild(container)
+              
+              mermaid.run({ nodes: [container] }).then(() => {
+                const svg = container.querySelector('svg')
+                if (svg) {
+                  svg.removeAttribute('style')
+                  svg.style.maxWidth = '100%'
+                  svg.style.height = 'auto'
+                  applyPreview(svg.outerHTML)
+                } else {
+                  applyPreview(container.innerHTML)
+                }
+                document.body.removeChild(container)
+              }).catch((err) => {
+                document.body.removeChild(container)
+                applyPreview(`<div class="mermaid-error">Mermaid Error: ${err.message}</div>`)
+              })
+              
+              return undefined
+            }
+            return null
+          }
         },
       },
     }
@@ -93,6 +129,36 @@ export function MilkdownEditor({ value, onChange, mode, placeholder, readOnly }:
         featureConfigs: {
           [Crepe.Feature.Placeholder]: {
             text: placeholder || '在这里输入 Markdown...',
+          },
+          [Crepe.Feature.CodeMirror]: {
+            renderPreview: (language, content, applyPreview) => {
+              if (language === 'mermaid' && content) {
+                const container = document.createElement('div')
+                container.className = 'mermaid'
+                container.style.cssText = 'position:absolute;visibility:hidden;width:800px;height:600px;'
+                container.textContent = content
+                document.body.appendChild(container)
+                
+                mermaid.run({ nodes: [container] }).then(() => {
+                  const svg = container.querySelector('svg')
+                  if (svg) {
+                    svg.removeAttribute('style')
+                    svg.style.maxWidth = '100%'
+                    svg.style.height = 'auto'
+                    applyPreview(svg.outerHTML)
+                  } else {
+                    applyPreview(container.innerHTML)
+                  }
+                  document.body.removeChild(container)
+                }).catch((err) => {
+                  document.body.removeChild(container)
+                  applyPreview(`<div class="mermaid-error">Mermaid Error: ${err.message}</div>`)
+                })
+                
+                return undefined
+              }
+              return null
+            }
           },
         },
       }

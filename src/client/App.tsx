@@ -3,7 +3,7 @@ import { Plus, Code, Eye, List, FileText } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { FileTree } from './components/FileTree'
-import { MilkdownEditor } from './components/MilkdownEditor'
+import { TipTapEditor } from './components/TipTapEditor'
 import { CreateFileModal } from './components/CreateFileModal'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
@@ -304,7 +304,7 @@ function App() {
                   </header>
                 )}
                 <div className="flex-1 overflow-hidden">
-                  <MilkdownEditor
+                  <TipTapEditor
                     key={path}
                     value={content}
                     onChange={updateContent}
