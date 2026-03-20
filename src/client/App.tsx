@@ -376,7 +376,7 @@ function App() {
                 )}
                 <div className="flex-1 overflow-hidden">
                   <TipTapEditor
-                    key={path}
+                    key={`${path}-${editorMode}`}
                     value={content}
                     onChange={updateContent}
                     mode={editorMode}

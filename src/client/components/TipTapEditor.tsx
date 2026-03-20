@@ -173,7 +173,8 @@ const CustomCodeBlock = CodeBlockLowlight.extend({
 }).configure({ lowlight })
 
 export function TipTapEditor({ value, onChange, mode, placeholder, readOnly }: TipTapEditorProps) {
-  const isInternalChange = useRef(false)
+  const isInternalUpdateRef = useRef(false)
+  const lastNotifiedValueRef = useRef<string>(value)
 
   const editor = useEditor({
     extensions: [
@@ -193,39 +194,48 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly }: T
     content: value,
     editable: !readOnly && mode === 'wysiwyg',
     onUpdate: ({ editor }) => {
-      if (!isInternalChange.current) {
-        try {
-          const storage = editor.storage as Record<string, any>
-          const markdownStorage = storage.markdown
-          if (markdownStorage && typeof markdownStorage.getMarkdown === 'function') {
-            const markdown = markdownStorage.getMarkdown()
-            onChange(markdown)
-          } else {
-            // Fallback: get text content
-            const text = editor.getText()
-            onChange(text)
-          }
-        } catch (e) {
-          console.error('Failed to get markdown:', e)
-          const text = editor.getText()
+      if (isInternalUpdateRef.current) {
+        return
+      }
+      try {
+        const storage = editor.storage as Record<string, any>
+        const markdownStorage = storage.markdown
+        const newValue = markdownStorage && typeof markdownStorage.getMarkdown === 'function'
+          ? markdownStorage.getMarkdown()
+          : editor.getText()
+        
+        if (newValue !== lastNotifiedValueRef.current) {
+          lastNotifiedValueRef.current = newValue
+          onChange(newValue)
+        }
+      } catch (e) {
+        console.error('Failed to get markdown:', e)
+        const text = editor.getText()
+        if (text !== lastNotifiedValueRef.current) {
+          lastNotifiedValueRef.current = text
           onChange(text)
         }
       }
     },
   })
 
-  const prevValueRef = useRef<string>(value)
-
   useEffect(() => {
-    if (editor && value !== prevValueRef.current) {
-      prevValueRef.current = value
-      isInternalChange.current = true
-      editor.commands.setContent(value)
-      setTimeout(() => {
-        isInternalChange.current = false
-      }, 0)
+    if (!editor) return
+
+    const editorContent = editor.getText()
+    if (value === editorContent) {
+      lastNotifiedValueRef.current = value
+      return
     }
-  }, [value, editor])
+
+    isInternalUpdateRef.current = true
+    editor.commands.setContent(value)
+    lastNotifiedValueRef.current = value
+    
+    requestAnimationFrame(() => {
+      isInternalUpdateRef.current = false
+    })
+  }, [editor, value])
 
   useEffect(() => {
     if (editor) {
