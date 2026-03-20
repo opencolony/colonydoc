@@ -1,104 +1,77 @@
 # ColonyDoc Agent Guidelines
 
-## Project Overview
+## 项目概述
 
-ColonyDoc is a **mobile-first** Markdown online editor with real-time preview, LaTeX support, and Mermaid diagram rendering. The frontend is built with React + Vite + Tailwind CSS v4, and the backend uses Hono.js with WebSocket support.
+ColonyDoc 是一款**移动端优先**的 Markdown 在线编辑器，支持实时预览、LaTeX 公式和 Mermaid 图表。前端使用 React + Vite + Tailwind CSS v4，后端使用 Hono.js + WebSocket。
 
-## Build Commands
+## 构建命令
 
 ```bash
-# Development (full stack - backend + frontend with HMR)
+# 全栈开发（后端 + 前端热更新）
 npm run dev
 
-# Frontend only (Vite dev server on port 5787)
+# 仅前端开发（Vite 开发服务器，端口 5787）
 npm run dev:frontend
 
-# Backend only (Hono server on port 5788)
+# 仅后端开发（Hono 服务器，端口 5788）
 npm run dev:backend
 
-# Production build (frontend + backend TypeScript compilation)
+# 生产构建（前端 + 后端 TypeScript 编译）
 npm run build
 
-# Preview production build
+# 预览生产构建
 npm run preview
 
-# Run production server
+# 运行生产服务器
 npm run start
 
-# TypeScript type checking (strict mode)
+# TypeScript 类型检查（严格模式）
 npm run typecheck
 ```
 
-**Note:** There is no testing framework or linting configured. Run `npm run typecheck` before committing to catch type errors.
+**注意：** 项目未配置测试框架或 linting。提交前务必运行 `npm run typecheck`。
 
-## Completing Work
-
-After completing a feature or bug fix:
-1. Run `npm run typecheck` to verify there are no type errors
-2. Ask the user if the work is complete and acceptable
-3. If the user confirms acceptance, commit the changes and push to remote
-4. If the user requests changes, make the requested modifications
-
-## Mobile-First Design (Critical)
-
-This project is **mobile-first**. All UI must be designed for mobile screens first, then enhanced for desktop.
-
-### Breakpoint
-- Mobile: `window.innerWidth < 768`
-- Desktop: `window.innerWidth >= 768`
-
-### Mobile Patterns
-- Use `isMobile` state to conditionally render mobile/desktop UI
-- Mobile: Drawer-based sidebar navigation (Sheet component)
-- Desktop: Fixed sidebar
-- Touch-friendly tap targets (minimum 44px)
-- Mobile header with hamburger menu, search, and editor mode toggle
-
-### Example Mobile Conditional Rendering
-```tsx
-const [isMobile, setIsMobile] = useState(() => {
-  if (typeof window === 'undefined') return false
-  return window.innerWidth < 768
-})
-
-useEffect(() => {
-  const checkMobile = () => setIsMobile(window.innerWidth < 768)
-  checkMobile()
-  window.addEventListener('resize', checkMobile)
-  return () => window.removeEventListener('resize', checkMobile)
-}, [])
-```
-
-## Code Style Guidelines
+## 代码风格指南
 
 ### TypeScript
-- **Strict mode enabled** - no implicit any, strict null checks
-- Use explicit types for all function parameters and return values
-- Define interfaces for all component props
-- Use `type` for simple type aliases, `interface` for complex object shapes
+- **严格模式已启用** - 禁止隐式 any，严格 null 检查
+- 所有函数参数和返回值使用显式类型
+- 为组件 props 定义接口
+- 简单类型别名用 `type`，复杂对象形状用 `interface`
 
-### React Patterns
-- Use `memo()` for pure components that re-render frequently
-- Use `useCallback()` for event handlers passed as props
-- Use `useRef()` for values that persist across renders without causing re-renders
-- Always specify dependency arrays in `useEffect` hooks
-- Default export for page components, named export for UI components
+### React 模式
+- 使用 `memo()` 处理频繁重渲染的纯组件
+- 使用 `useCallback()` 处理作为 props 传递的事件处理函数
+- 使用 `useRef()` 处理跨渲染持久化但不触发重渲染的值
+- `useEffect` 必须指定依赖数组
+- 页面组件使用默认导出，UI 组件使用命名导出
 
-### Imports
-- React hooks: `import { useState, useCallback, useEffect, useRef, memo } from 'react'`
-- Icons: `import { IconName } from 'lucide-react'`
-- UI components: `import { Button } from './components/ui/button'`
-- Utilities: `import { cn } from './lib/utils'`
-- Path aliases: Use `@/*` for imports from `src/*` (e.g., `import { cn } from '@/client/lib/utils'`)
+### 导入规范
+```tsx
+// React hooks
+import { useState, useCallback, useEffect, useRef, memo } from 'react'
 
-### ClassName / Styling
-- Use Tailwind CSS classes exclusively
-- Use `cn()` utility (clsx + tailwind-merge) for conditional classes
-- Use shadcn/ui components as base (Button, Sheet, Dialog, etc.)
-- Use `class-variance-authority` (CVA) for component variants
-- Mobile classes first: `className="flex flex-col md:flex-row"`
+// Icons
+import { IconName } from 'lucide-react'
 
-### Component Structure
+// UI 组件
+import { Button } from './components/ui/button'
+
+// 工具函数
+import { cn } from './lib/utils'
+
+// Path aliases
+import { cn } from '@/client/lib/utils'
+```
+
+### 样式规范
+- 仅使用 Tailwind CSS 类
+- 使用 `cn()` 工具函数（clsx + tailwind-merge）处理条件类名
+- 基于 shadcn/ui 组件构建（Button、Sheet、Dialog 等）
+- 使用 `class-variance-authority` (CVA) 定义组件变体
+- **移动端类名在前**：先写移动端样式，再逐步增强到桌面端
+
+### 组件结构
 ```tsx
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
@@ -113,62 +86,112 @@ const componentVariants = cva("base-classes", {
   defaultVariants: { variant: "default", size: "default" },
 })
 
-export interface ComponentProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof componentVariants> {}
+export interface ComponentProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof componentVariants> {}
 
-const Component = memo(function Component({ className, variant, size, ...props }: ComponentProps) {
-  return <div className={cn(componentVariants({ variant, size, className }))} {...props} />
+const Component = memo(function Component({
+  className,
+  variant,
+  size,
+  ...props
+}: ComponentProps) {
+  return (
+    <div className={cn(componentVariants({ variant, size, className }))} {...props} />
+  )
 })
 
 export { Component, componentVariants }
 ```
 
-### Error Handling
-- Wrap async operations in try/catch blocks
-- Log errors with descriptive messages: `console.error('Failed to fetch files:', e)`
-- Handle loading and error states explicitly in UI
+### 错误处理
+- 异步操作必须包装在 try/catch 中
+- 错误日志使用描述性消息：`console.error('Failed to fetch files:', e)`
+- 在 UI 中显式处理加载和错误状态
 
-### Naming Conventions
-- Components: PascalCase (`FileTree`, `TipTapEditor`)
-- Hooks: camelCase with `use` prefix (`useFile`, `useWebSocket`)
-- Files: kebab-case for utilities (`utils.ts`, `api-helpers.ts`)
-- CSS classes: kebab-case (`text-muted-foreground`, `bg-sidebar`)
-- Interfaces: PascalCase with descriptive names (`FileNode`, `SidebarContentProps`)
+### 命名约定
+| 类型 | 约定 | 示例 |
+|------|------|------|
+| 组件 | PascalCase | `FileTree`, `TipTapEditor` |
+| Hooks | camelCase + use 前缀 | `useFile`, `useWebSocket` |
+| 文件 | kebab-case | `utils.ts`, `api-helpers.ts` |
+| CSS 类 | kebab-case | `text-muted-foreground` |
+| 接口 | PascalCase + 描述性名称 | `FileNode`, `SidebarContentProps` |
 
-## Project Structure
+## 移动端优先设计（重要）
+
+本项目**移动端优先**。所有 UI 必须先为移动端屏幕设计，再增强到桌面端。
+
+### 断点
+- 移动端：`window.innerWidth < 768`
+- 桌面端：`window.innerWidth >= 768`
+
+### 移动端模式
+- 使用 `isMobile` 状态条件渲染移动端/桌面端 UI
+- 移动端：基于 Drawer 的侧边栏导航（Sheet 组件）
+- 桌面端：固定侧边栏
+- 触摸友好的点击目标（最小 44px）
+- 移动端 Header 包含汉堡菜单、搜索和编辑器模式切换
+
+### 移动端条件渲染示例
+```tsx
+const [isMobile, setIsMobile] = useState(() => {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth < 768
+})
+
+useEffect(() => {
+  const checkMobile = () => setIsMobile(window.innerWidth < 768)
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  return () => window.removeEventListener('resize', checkMobile)
+}, [])
+```
+
+## 完成工作
+
+完成功能或修复后：
+1. 运行 `npm run typecheck` 验证无类型错误
+2. 询问用户工作是否完成且可接受
+3. 用户确认后，提交更改并推送到远程
+4. 用户请求修改时，进行相应修改
+5. **分析变更是否需要更新 README 和 README.zh**，如需要则进行更新
+
+## 项目结构
 
 ```
 src/
-├── client/              # React frontend
-│   ├── components/      # UI components
-│   │   ├── ui/          # shadcn/ui base components
-│   │   └── *.tsx        # Feature components
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Utilities (cn, api client)
-│   └── pages/           # Page components
-├── server/              # Hono.js backend
-│   ├── api.ts           # File routing API
-│   ├── app.ts           # Hono app setup
-│   ├── index.ts         # Server entry
-│   └── watcher.ts       # File system watcher
-└── dev.ts               # Dev server launcher
+├── client/              # React 前端
+│   ├── components/     # UI 组件
+│   │   ├── ui/         # shadcn/ui 基础组件
+│   │   └── *.tsx       # 功能组件
+│   ├── hooks/          # 自定义 React hooks
+│   ├── lib/            # 工具函数（cn、api 客户端）
+│   └── pages/          # 页面组件
+├── server/             # Hono.js 后端
+│   ├── api.ts          # 文件路由 API
+│   ├── app.ts          # Hono 应用配置
+│   ├── index.ts        # 服务器入口
+│   └── watcher.ts      # 文件系统监视器
+└── dev.ts              # 开发服务器启动器
 ```
 
-## Key Dependencies
+## 路径别名
 
-- **UI**: React 18, Tailwind CSS v4, shadcn/ui (Radix UI primitives), lucide-react
-- **Editor**: TipTap 3, Milkdown, Mermaid, KaTeX
-- **Backend**: Hono, @hono/node-server, ws (WebSocket)
-- **Dev**: TypeScript 5, Vite 6, tsx
-
-## Path Aliases
-
-The `@/*` alias maps to `src/*`:
+`@/*` 别名映射到 `src/*`：
 - `@/client/*` → `src/client/*`
-- `@/server/*` → `src/server/*` (backend only)
+- `@/server/*` → `src/server/*`（仅后端使用）
 
-## Available Skills
+## 关键依赖
 
-The `.agents/skills/` directory contains specialized guidance:
-- `vercel-react-best-practices/` - React performance optimization
-- `shadcn-ui/` - shadcn/ui component patterns
-- `tailwind-design-system/` - Tailwind CSS v4 design tokens
+- **UI**: React 18, Tailwind CSS v4, shadcn/ui (Radix UI), lucide-react
+- **编辑器**: TipTap 3, Milkdown, Mermaid, KaTeX
+- **后端**: Hono, @hono/node-server, ws (WebSocket)
+- **开发**: TypeScript 5, Vite 6, tsx
+
+## 可用技能
+
+`.agents/skills/` 目录包含专业指导：
+- `vercel-react-best-practices/` - React 性能优化
+- `shadcn-ui/` - shadcn/ui 组件模式
+- `tailwind-design-system/` - Tailwind CSS v4 设计令牌
