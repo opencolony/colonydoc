@@ -222,18 +222,44 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly }: T
   useEffect(() => {
     if (!editor) return
 
-    const editorContent = editor.getText()
-    if (value === editorContent) {
+    if (isInternalUpdateRef.current) {
+      return
+    }
+
+    let editorMarkdown = ''
+    try {
+      const storage = editor.storage as Record<string, any>
+      const markdownStorage = storage.markdown
+      editorMarkdown = markdownStorage && typeof markdownStorage.getMarkdown === 'function'
+        ? markdownStorage.getMarkdown()
+        : editor.getText()
+    } catch {
+      editorMarkdown = editor.getText()
+    }
+
+    if (editorMarkdown === value) {
       lastNotifiedValueRef.current = value
       return
     }
 
+    const { from, to } = editor.state.selection
+
     isInternalUpdateRef.current = true
     editor.commands.setContent(value)
     lastNotifiedValueRef.current = value
-    
+
     requestAnimationFrame(() => {
       isInternalUpdateRef.current = false
+      try {
+        const maxPos = editor.state.doc.content.size
+        const newFrom = Math.min(from, maxPos)
+        const newTo = Math.min(to, maxPos)
+        if (newFrom >= 0 && newTo >= 0) {
+          editor.commands.setTextSelection({ from: newFrom, to: newTo })
+        }
+      } catch {
+        editor.commands.setTextSelection({ from: 0, to: 0 })
+      }
     })
   }, [editor, value])
 
