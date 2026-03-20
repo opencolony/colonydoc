@@ -293,7 +293,7 @@ function App() {
             )}
             <aside 
               className={cn(
-                "fixed z-50 inset-y-0 left-0 w-[280px] bg-sidebar border-r border-sidebar-border p-0 transition-transform duration-150",
+                "fixed z-50 inset-0 w-full bg-sidebar p-0 transition-transform duration-150",
                 drawerVisible ? "translate-x-0" : "-translate-x-full"
               )}
             >
