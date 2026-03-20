@@ -7,8 +7,7 @@ import { cors } from 'hono/cors'
 import { createFileRouter } from '../dist/server/api.js'
 import { loadConfig } from '../dist/config.js'
 import { setupWatcher } from '../dist/server/watcher.js'
-import { WebSocketServer } from 'ws'
-import { createServer } from 'http'
+import { WebSocketServer, WebSocket } from 'ws'
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
@@ -103,35 +102,38 @@ async function main() {
 </html>`)
   })
 
-  const httpServer = createServer()
-  const wss = new WebSocketServer({ server: httpServer })
+  const server = serve({
+    fetch: app.fetch,
+    port: config.port,
+    hostname: config.host,
+  })
 
   const clients = new Set()
+  const wss = new WebSocketServer({ noServer: true })
 
   wss.on('connection', (ws) => {
     clients.add(ws)
     ws.on('close', () => clients.delete(ws))
   })
 
-  setupWatcher(config, {
-    onFileChange: (event, path) => {
-      const message = JSON.stringify({ type: 'file:change', event, path })
-      clients.forEach((client) => {
-        if (client.readyState === 1) {
-          client.send(message)
-        }
-      })
-    },
-  })
-
-  serve({ fetch: app.fetch, port: config.port, hostname: config.host })
-
-  httpServer.on('upgrade', (request, socket, head) => {
+  server.on('upgrade', (request, socket, head) => {
     if (request.url === '/ws') {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request)
       })
     }
+  })
+
+  setupWatcher(config, {
+    onFileChange: (event, path) => {
+      const relativePath = path.replace(config.root, '')
+      const message = JSON.stringify({ type: 'file:change', event, path: relativePath })
+      clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message)
+        }
+      })
+    },
   })
 
   console.log(`\n  ColonyDoc is running!\n`)

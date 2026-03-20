@@ -5,7 +5,6 @@ import { createFileRouter } from './api.js'
 import { loadConfig } from '../config.js'
 import { setupWatcher } from './watcher.js'
 import { WebSocketServer, WebSocket } from 'ws'
-import { createServer } from 'http'
 import fs from 'fs'
 import path from 'path'
 
@@ -47,14 +46,26 @@ async function main() {
 </html>`)
   })
 
-  const httpServer = createServer()
-  const wss = new WebSocketServer({ server: httpServer })
+  const server = serve({
+    fetch: app.fetch,
+    port: config.port,
+    hostname: config.host,
+  })
 
   const clients = new Set<WebSocket>()
+  const wss = new WebSocketServer({ noServer: true })
 
   wss.on('connection', (ws) => {
     clients.add(ws)
     ws.on('close', () => clients.delete(ws))
+  })
+
+  server.on('upgrade', (request, socket, head) => {
+    if (request.url === '/ws') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request)
+      })
+    }
   })
 
   setupWatcher(config, {
@@ -67,16 +78,6 @@ async function main() {
         }
       })
     },
-  })
-
-  serve({ fetch: app.fetch, port: config.port, hostname: config.host })
-
-  httpServer.on('upgrade', (request, socket, head) => {
-    if (request.url === '/ws') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request)
-      })
-    }
   })
 
   console.log(`\n  ColonyDoc is running!\n`)
