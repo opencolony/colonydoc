@@ -94,7 +94,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
       <SidebarMenuItem className="sidebar-menu-item">
         <SidebarMenuButton
           isActive={isActive}
-          className="data-[active=true]:bg-transparent pr-8"
+          className="data-[active=true]:bg-sidebar-accent pr-8"
           onClick={() => onSelect(node.path, 'file')}
         >
           <File className="size-4 shrink-0" />
@@ -137,7 +137,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   return (
     <SidebarMenuItem className="sidebar-menu-item">
       <Collapsible
-        className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
+        className="group/collapsible"
         open={isExpanded}
         onOpenChange={(open) => {
           if (open && onExpand) {
@@ -160,7 +160,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
               isActive={isActive}
               className="data-[active=true]:bg-transparent flex-1 pr-8"
             >
-              <ChevronRight className="size-4 shrink-0 transition-transform" />
+              <ChevronRight className={cn("size-4 shrink-0 transition-transform", isExpanded && "rotate-90")} />
               <Folder className="size-4 shrink-0" />
               <span className="flex-1 whitespace-nowrap">{node.name}</span>
             </SidebarMenuButton>
