@@ -126,6 +126,8 @@ function App() {
     load,
     updateContent,
     save,
+    setPath,
+    setContent,
   } = useFile({
     onSaveStart: () => setIsSaving(true),
     onSave: () => setIsSaving(false),
@@ -235,7 +237,19 @@ function App() {
 
   const handleEditingChange = useCallback((type: 'file' | 'directory' | null) => {
     setEditingType(type)
-  }, [])
+    if (currentDir) {
+      const parts = currentDir.split('/').filter(Boolean)
+      const toExpand = new Set<string>()
+      for (let i = 0; i < parts.length; i++) {
+        toExpand.add('/' + parts.slice(0, i + 1).join('/'))
+      }
+      setExpandedPaths(prev => {
+        const next = new Set(prev)
+        toExpand.forEach(p => next.add(p))
+        return next
+      })
+    }
+  }, [currentDir])
 
   const handleCreateSubmit = useCallback(async (name: string, isDirectory: boolean) => {
     try {
@@ -270,11 +284,19 @@ function App() {
   const handleDeleteFile = useCallback(async (filePath: string) => {
     try {
       await fetch(`/api/files${filePath}`, { method: 'DELETE' })
+      if (path && (path === filePath || path.startsWith(filePath + '/'))) {
+        loadingRef.current = null
+        window.location.hash = ''
+        setPath(null)
+        setContent('')
+        setRefreshDialogOpen(false)
+        setPendingExternalChange(null)
+      }
       fetchFiles()
     } catch (e) {
       console.error('Failed to delete:', e)
     }
-  }, [fetchFiles])
+  }, [fetchFiles, path])
 
   const handleCreateFile = useCallback(async (name: string, isDirectory: boolean, parentPath: string) => {
     try {
