@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 
 import { serve } from '@hono/node-server'
-import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { createFileRouter } from '../dist/server/api.js'
 import { loadConfig } from '../dist/config.js'
 import { setupWatcher } from '../dist/server/watcher.js'
 import { WebSocketServer, WebSocket } from 'ws'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { dirname, join, extname } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -97,8 +96,20 @@ async function main() {
   const fileRouter = createFileRouter(config)
   app.route('/api/files', fileRouter)
 
-  const publicDir = new URL('../dist/client', import.meta.url).pathname
-  app.use('/*', serveStatic({ root: publicDir }))
+  const publicDir = join(dirname(fileURLToPath(import.meta.url)), '../dist/client')
+
+  app.get('/assets/*', async (c) => {
+    const filePath = c.req.path.replace('/assets', '')
+    const fullPath = join(publicDir, 'assets', filePath)
+    if (!existsSync(fullPath)) {
+      return c.notFound()
+    }
+    const content = readFileSync(fullPath)
+    const ext = extname(filePath)
+    const contentType = ext === '.js' ? 'application/javascript' : ext === '.css' ? 'text/css' : 'text/plain'
+    return new Response(content, { headers: { 'Content-Type': contentType } })
+  })
+
   app.get('*', async (c) => {
     return c.html(`<!DOCTYPE html>
 <html>
