@@ -4,7 +4,7 @@
 
 一个支持实时预览、Mermaid 图表和 LaTeX 公式的 Markdown 在线编辑器。
 
-> ✨ **在线编辑服务端 Markdown 文件** - 无需上传下载，直接在浏览器中编辑！
+> **在线编辑服务端 Markdown 文件** - 无需上传下载，直接在浏览器中编辑！
 
 ## 功能特性
 
@@ -20,7 +20,7 @@
 ## 安装
 
 ```bash
-npm install -g colonydoc
+npm install -g @opencolony/colonydoc
 ```
 
 ## 使用方法
@@ -34,12 +34,12 @@ colonydoc [选项]
 ### 选项
 
 | 选项 | 别名 | 描述 | 默认值 |
-|--------|-------|-------------|---------|
+|------|------|------|--------|
 | `--root` | `-r` | 文档根目录 | 当前目录 |
 | `--port` | `-p` | 服务器端口 | `5787` |
-| `--host` | `-h` | 服务器地址 | `0.0.0.0` |
+| `--host` | | 服务器地址 | `0.0.0.0` |
 | `--config` | `-c` | 配置文件路径 | `colonydoc.config.js` |
-| `--help` | | 显示帮助 | |
+| `--help` | `-h` | 显示帮助 | |
 | `--version` | | 显示版本 | |
 
 ### 示例
@@ -67,9 +67,17 @@ colonydoc -r ./docs -p 8080
 
 ```javascript
 export default {
-  root: './docs',    // 文档根目录
-  port: 5787,        // 服务器端口
-  host: '0.0.0.0',   // 服务器地址
+  root: './docs',       // 文档根目录
+  port: 5787,           // 服务器端口
+  host: '0.0.0.0',      // 服务器地址
+  allowedExtensions: ['.md', '.markdown'],  // 支持的文件扩展名
+  theme: {
+    default: 'system',  // 主题：light | dark | system
+  },
+  editor: {
+    autosave: true,     // 自动保存
+    debounceMs: 300,     // 保存防抖延迟
+  },
 }
 ```
 
@@ -82,8 +90,14 @@ git clone https://github.com/opencolony/colonydoc.git
 # 安装依赖
 npm install
 
-# 启动开发服务器
+# 启动开发服务器（后端 + 前端热更新）
 npm run dev
+
+# 仅前端开发（Vite 开发服务器，端口 5787）
+npm run dev:frontend
+
+# 仅后端开发（Hono 服务器，端口 5788）
+npm run dev:backend
 
 # 构建生产版本
 npm run build
@@ -97,7 +111,7 @@ npm start
 - **后端**: Hono, @hono/node-server, ws (WebSocket)
 - **前端**: React 18, Vite, Tailwind CSS v4
 - **UI 组件**: shadcn/ui (Radix UI)
-- **编辑器**: TipTap 3, Milkdown, tiptap-markdown
+- **编辑器**: TipTap 3, tiptap-markdown
 - **图表**: Mermaid
 - **LaTeX 公式**: KaTeX
 - **图标**: lucide-react

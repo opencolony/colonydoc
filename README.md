@@ -4,7 +4,7 @@
 
 A modern Markdown online editor with real-time preview, Mermaid diagrams, and LaTeX support.
 
-> ✨ **Edit server-side Markdown files** - No upload needed, edit directly in your browser!
+> **Edit server-side Markdown files** - No upload needed, edit directly in your browser!
 
 ## Features
 
@@ -20,7 +20,7 @@ A modern Markdown online editor with real-time preview, Mermaid diagrams, and La
 ## Installation
 
 ```bash
-npm install -g colonydoc
+npm install -g @opencolony/colonydoc
 ```
 
 ## Usage
@@ -37,9 +37,9 @@ colonydoc [options]
 |--------|-------|-------------|---------|
 | `--root` | `-r` | Root directory for documents | Current directory |
 | `--port` | `-p` | Server port | `5787` |
-| `--host` | `-h` | Server host | `0.0.0.0` |
+| `--host` | | Server host | `0.0.0.0` |
 | `--config` | `-c` | Config file path | `colonydoc.config.js` |
-| `--help` | | Show help | |
+| `--help` | `-h` | Show help | |
 | `--version` | | Show version | |
 
 ### Examples
@@ -67,9 +67,17 @@ Create a `colonydoc.config.js` file in your project root:
 
 ```javascript
 export default {
-  root: './docs',    // Root directory for documents
-  port: 5787,        // Server port
-  host: '0.0.0.0',   // Server host
+  root: './docs',       // Root directory for documents
+  port: 5787,           // Server port
+  host: '0.0.0.0',      // Server host
+  allowedExtensions: ['.md', '.markdown'],  // Supported file extensions
+  theme: {
+    default: 'system',  // Theme: light | dark | system
+  },
+  editor: {
+    autosave: true,     // Auto save
+    debounceMs: 300,    // Save debounce delay
+  },
 }
 ```
 
@@ -82,8 +90,14 @@ git clone https://github.com/opencolony/colonydoc.git
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (backend + frontend with hot reload)
 npm run dev
+
+# Frontend only (Vite dev server, port 5787)
+npm run dev:frontend
+
+# Backend only (Hono server, port 5788)
+npm run dev:backend
 
 # Build for production
 npm run build
@@ -97,7 +111,7 @@ npm start
 - **Backend**: Hono, @hono/node-server, ws (WebSocket)
 - **Frontend**: React 18, Vite, Tailwind CSS v4
 - **UI Components**: shadcn/ui (Radix UI)
-- **Editor**: TipTap 3, Milkdown, tiptap-markdown
+- **Editor**: TipTap 3, tiptap-markdown
 - **Diagrams**: Mermaid
 - **LaTeX**: KaTeX
 - **Icons**: lucide-react

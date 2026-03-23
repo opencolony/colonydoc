@@ -18,6 +18,7 @@ const pkg = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8')
 
 const argv = process.argv.slice(2)
 const args = {}
+const validOptions = new Set(['root', 'r', 'port', 'p', 'host', 'config', 'c', 'help', 'h', 'version'])
 
 for (let i = 0; i < argv.length; i++) {
   const arg = argv[i]
@@ -39,6 +40,18 @@ for (let i = 0; i < argv.length; i++) {
     } else {
       args[key] = true
     }
+  } else {
+    console.error(`Unknown argument: ${arg}`)
+    console.error(`Run 'colonydoc --help' for usage.`)
+    process.exit(1)
+  }
+}
+
+for (const key of Object.keys(args)) {
+  if (!validOptions.has(key)) {
+    console.error(`Unknown option: --${key}`)
+    console.error(`Run 'colonydoc --help' for usage.`)
+    process.exit(1)
   }
 }
 
@@ -52,9 +65,9 @@ Usage:
 Options:
   -r, --root <path>      Root directory (default: current directory)
   -p, --port <number>    Server port (default: 5787)
-  -h, --host <host>      Server host (default: 0.0.0.0)
+  --host <host>          Server host (default: 0.0.0.0)
   -c, --config <path>    Config file path
-  --help                 Show this help
+  -h, --help             Show this help
   --version              Show version
 `)
   process.exit(0)
@@ -74,8 +87,8 @@ async function main() {
   if (args.p || args.port) {
     config.port = parseInt(args.p || args.port, 10)
   }
-  if (args.h || args.host) {
-    config.host = args.h || args.host
+  if (args.host) {
+    config.host = args.host
   }
 
   const app = new Hono()
