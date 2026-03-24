@@ -15,10 +15,11 @@ import { Highlight } from '@tiptap/extension-highlight'
 import { Underline } from '@tiptap/extension-underline'
 import { Typography } from '@tiptap/extension-typography'
 import { common, createLowlight } from 'lowlight'
-import { useEffect, useRef, useState, useMemo, memo } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import mermaid from 'mermaid'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
+import { Maximize2 } from 'lucide-react'
+import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
 
 mermaid.initialize({
   startOnLoad: false,
@@ -37,54 +38,14 @@ interface TipTapEditorProps {
   onLinkClick?: (path: string) => void
 }
 
-const MermaidZoom = memo(function MermaidZoom({ 
-  svgContent,
-  onControlsReady 
-}: { 
-  svgContent: string
-  onControlsReady: (controls: { zoomIn: () => void; zoomOut: () => void; resetTransform: () => void }) => void
-}) {
-  const [isZoomed, setIsZoomed] = useState(false)
-  
-  return (
-    <TransformWrapper
-      initialScale={1}
-      minScale={1}
-      maxScale={5}
-      wheel={{ disabled: true }}
-      panning={{ disabled: !isZoomed }}
-      doubleClick={{ disabled: true }}
-      onTransformed={(_, state) => {
-        setIsZoomed(state.scale > 1)
-      }}
-    >
-      {({ zoomIn, zoomOut, resetTransform }) => {
-        onControlsReady({ 
-          zoomIn, 
-          zoomOut, 
-          resetTransform: () => {
-            resetTransform()
-            setIsZoomed(false)
-          }
-        })
-        return (
-          <TransformComponent wrapperStyle={{ width: '100%' }}>
-            <div dangerouslySetInnerHTML={{ __html: svgContent }} />
-          </TransformComponent>
-        )
-      }}
-    </TransformWrapper>
-  )
-})
-
 function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
   const isMermaid = node.attrs.language === 'mermaid'
   const [svgContent, setSvgContent] = useState<string>('')
   const [error, setError] = useState<string>('')
-  const [zoomControls, setZoomControls] = useState<{ zoomIn: () => void; zoomOut: () => void; resetTransform: () => void } | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   
   const mermaidId = useMemo(() => `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, [])
+  const mermaidSource = node.textContent
 
   useEffect(() => {
     if (!isMermaid) {
@@ -93,8 +54,7 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
       return
     }
 
-    const code = node.textContent
-    if (!code) {
+    if (!mermaidSource) {
       setSvgContent('')
       setError('')
       return
@@ -102,27 +62,24 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
 
     let cancelled = false
 
-    const renderMermaid = async () => {
-      try {
-        const { svg } = await mermaid.render(mermaidId, code)
+    mermaid.render(mermaidId, mermaidSource)
+      .then(({ svg }) => {
         if (!cancelled) {
           setSvgContent(svg)
           setError('')
         }
-      } catch (err: any) {
+      })
+      .catch((err: any) => {
         if (!cancelled) {
           setError(err.message || 'Mermaid render error')
           setSvgContent('')
         }
-      }
-    }
-
-    renderMermaid()
+      })
 
     return () => {
       cancelled = true
     }
-  }, [isMermaid, node.textContent, mermaidId])
+  }, [isMermaid, mermaidSource, mermaidId])
 
   return (
     <NodeViewWrapper className={`code-block-wrapper ${selected ? 'selected' : ''}`}>
@@ -147,23 +104,23 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
           <option value="markdown">Markdown</option>
           <option value="bash">Bash</option>
         </select>
-        {isMermaid && zoomControls && (
-          <div className="mermaid-zoom-controls" contentEditable={false}>
-            <button onClick={() => zoomControls.zoomIn()} title="放大">+</button>
-            <button onClick={() => zoomControls.zoomOut()} title="缩小">−</button>
-            <button onClick={() => zoomControls.resetTransform()} title="重置">⟲</button>
-          </div>
+        {isMermaid && (
+          <button
+            className="mermaid-fullscreen-btn"
+            contentEditable={false}
+            onClick={() => setIsFullscreen(true)}
+            title="全屏预览"
+          >
+            <Maximize2 className="size-4" />
+          </button>
         )}
       </div>
       {isMermaid ? (
-        <div ref={containerRef} className="mermaid-preview" contentEditable={false}>
+        <div className="mermaid-preview" contentEditable={false}>
           {error ? (
             <div className="mermaid-error">Mermaid Error: {error}</div>
           ) : svgContent ? (
-            <MermaidZoom 
-              svgContent={svgContent} 
-              onControlsReady={setZoomControls}
-            />
+            <div className="mermaid-svg-container" dangerouslySetInnerHTML={{ __html: svgContent }} />
           ) : (
             <div className="mermaid-loading">渲染中...</div>
           )}
@@ -174,6 +131,13 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
             <NodeViewContent />
           </code>
         </pre>
+      )}
+      {isMermaid && (
+        <MermaidFullscreenDialog
+          source={mermaidSource}
+          open={isFullscreen}
+          onOpenChange={(open) => setIsFullscreen(open)}
+        />
       )}
     </NodeViewWrapper>
   )

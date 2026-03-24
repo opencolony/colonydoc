@@ -436,14 +436,15 @@
   padding: 0;
 }
 
-/* Mermaid Preview Styles */
+/* Mermaid Preview Styles (Non-fullscreen) */
 .mermaid-preview {
   @apply w-full;
   padding: 12px;
   background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
   position: relative;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 767px) {
@@ -461,39 +462,33 @@
   }
 }
 
-.mermaid-preview > .react-transform-wrapper {
-  position: relative;
-  width: 100%;
-  flex: 1;
-}
-
-.mermaid-preview > .react-transform-wrapper > .react-transform-component {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mermaid-preview > .react-transform-wrapper > .react-transform-component > div {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mermaid-preview > .react-transform-wrapper > .react-transform-component > div svg {
-  max-width: 100%;
-  max-height: 100%;
-}
-
-
-
 @media (min-width: 768px) {
   .mermaid-preview {
     padding: 1.5rem;
   }
+}
+
+.mermaid-svg-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.mermaid-svg-container svg {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+}
+
+.mermaid-fullscreen-btn {
+  @apply ml-auto p-1.5 rounded-md hover:bg-accent cursor-pointer transition-colors;
+}
+
+.mermaid-fullscreen-btn:active {
+  transform: scale(0.95);
 }
 
 .mermaid-loading {
@@ -506,19 +501,106 @@
   border: 1px solid var(--color-destructive);
 }
 
-.mermaid-zoom-controls {
-  @apply flex gap-1 ml-auto;
+/* Mermaid Fullscreen Dialog */
+.mermaid-fullscreen-dialog {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  transform: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: unset !important;
 }
 
-.mermaid-zoom-controls button {
-  @apply px-2 py-1 text-sm rounded-md bg-background hover:bg-primary hover:text-primary-foreground cursor-pointer border border-border select-none transition-all;
-  min-width: 32px;
-  min-height: 32px;
-  font-weight: 500;
+.mermaid-fullscreen-dialog > * {
+  flex-shrink: 0;
 }
 
-.mermaid-zoom-controls button:active {
+.mermaid-fullscreen-dialog > *:not(.mermaid-fullscreen-header):not(.mermaid-fullscreen-body) {
+  display: none !important;
+}
+
+.mermaid-fullscreen-header {
+  @apply flex items-center justify-between p-3 border-b flex-shrink-0 bg-background;
+}
+
+.mermaid-fullscreen-controls {
+  @apply flex gap-2;
+}
+
+.mermaid-fullscreen-body {
+  @apply flex flex-1 min-h-0;
+  height: 0; /* Force flex children to calculate height */
+}
+
+.mermaid-fullscreen-content {
+  @apply flex items-center justify-center overflow-hidden relative;
+  flex: 1 1 auto;
+  min-height: 200px;
+  background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
+}
+
+.mermaid-fullscreen-chart {
+  @apply flex items-center justify-center;
+  width: 100%;
+  height: 100%;
+}
+
+.mermaid-fullscreen-svg-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  min-height: 200px;
+  width: 100%;
+  height: 100%;
+}
+
+.mermaid-fullscreen-svg-container svg {
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 100px;
+  min-height: 100px;
+  width: auto;
+  height: auto;
+}
+
+.mermaid-fullscreen-zoom-controls {
+  @apply absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 bg-background/90 backdrop-blur-sm rounded-lg p-1 shadow-lg border z-10;
+}
+
+.mermaid-fullscreen-zoom-controls button {
+  @apply p-2 rounded-md hover:bg-accent cursor-pointer transition-colors;
+}
+
+.mermaid-fullscreen-zoom-controls button:active {
   transform: scale(0.95);
+}
+
+.mermaid-fullscreen-source-panel {
+  @apply w-64 border-l bg-background flex-shrink-0;
+}
+
+@media (max-width: 767px) {
+  .mermaid-fullscreen-body {
+    @apply flex-col;
+  }
+
+  .mermaid-fullscreen-source-panel {
+    @apply w-full h-40 border-l-0 border-t;
+  }
+}
+
+.mermaid-fullscreen-source-code {
+  @apply p-4 text-sm font-mono whitespace-pre-wrap break-all;
 }
 
 /* Code Syntax Highlighting - GitHub Light Theme */
