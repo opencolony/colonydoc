@@ -188,14 +188,58 @@ export function createFileRouter(config: ColonydocConfig) {
     }
   })
 
-  router.delete('/*', async (c) => {
+  router.put('/*', async (c) => {
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
     const fullPath = path.join(config.root, filePath)
-    
+
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
     }
-    
+
+    try {
+      const body = await c.req.json()
+      const { oldPath, newPath, isDirectory } = body
+
+      if (!oldPath || !newPath) {
+        return c.json({ error: 'oldPath and newPath are required' }, 400)
+      }
+
+      const oldFullPath = path.join(config.root, oldPath)
+      const newFullPath = path.join(config.root, newPath)
+
+      if (!isAllowed(oldFullPath, config) || !isAllowed(newFullPath, config)) {
+        return c.json({ error: 'Access denied' }, 403)
+      }
+
+      if (isDirectory) {
+        const stat = await fs.stat(oldFullPath)
+        if (!stat.isDirectory()) {
+          return c.json({ error: 'Source is not a directory' }, 400)
+        }
+        await fs.rename(oldFullPath, newFullPath)
+      } else {
+        const ext = path.extname(newPath).toLowerCase()
+        if (!hasAllowedExtension(newPath, config.allowedExtensions)) {
+          return c.json({ error: 'File type not allowed' }, 400)
+        }
+        await fs.rename(oldFullPath, newFullPath)
+      }
+
+      return c.json({ success: true, newPath })
+    } catch (e) {
+      console.error('Rename/Move error:', e)
+      return c.json({ error: 'Failed to rename or move' }, 500)
+    }
+  })
+
+  router.delete('/*', async (c) => {
+    const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
+    const fullPath = path.join(config.root, filePath)
+
+    if (!isAllowed(fullPath, config)) {
+      return c.json({ error: 'Access denied' }, 403)
+    }
+
     try {
       const stat = await fs.stat(fullPath)
       if (stat.isDirectory()) {

@@ -1,5 +1,5 @@
 import { memo, SetStateAction, useState, useRef, useEffect } from 'react'
-import { ChevronRight, File, Folder, Trash2, FileText } from 'lucide-react'
+import { ChevronRight, File, Folder, Trash2, FileText, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Input } from './ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible'
@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog'
+import { FileItemMenu } from './FileItemMenu'
 
 interface FileNode {
   name: string
@@ -38,32 +39,37 @@ interface FileTreeProps {
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
+  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
 }
 
-function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onExpand, editingType, onEditingChange, onCreateSubmit, currentDir }: {
+function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit, currentDir }: {
   node: FileNode
   activePath: string | null
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
+  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
   currentDir: string
 }) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editName, setEditName] = useState('')
+  const [menuItem, setMenuItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; childrenCount?: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath
   const isExpanded = expandedPaths.has(node.path)
   const hasChildren = isDirectory && node.children && node.children.length > 0
+  const childrenCount = node.children?.length || 0
   const isCurrentDir = editingType && node.path === currentDir
 
   useEffect(() => {
@@ -104,32 +110,19 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
             data-sidebar="menu-action"
             onClick={(e) => {
               e.stopPropagation()
-              setDeleteDialogOpen(true)
+              setMenuItem({ path: node.path, name: node.name, type: 'file' })
             }}
-            className="sidebar-menu-item-delete absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive z-10"
+            className="sidebar-menu-item-action absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-accent z-10"
           >
-            <Trash2 className="size-3.5" />
+            <MoreHorizontal className="size-3.5" />
           </button>
 
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认删除</AlertDialogTitle>
-              <AlertDialogDescription>
-                确定要删除 {node.name} 吗？此操作无法撤销。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>取消</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => onDelete(node.path)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                删除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <FileItemMenu
+          item={menuItem}
+          onRenameRequest={onRenameRequest}
+          onMoveRequest={onMoveRequest}
+          onDelete={onDelete}
+        />
       </SidebarMenuItem>
     )
   }
@@ -167,38 +160,19 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           </CollapsibleTrigger>
           <button
               data-sidebar="menu-action"
-              onClick={() => setDeleteDialogOpen(true)}
-              className="sidebar-menu-item-delete absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-destructive/10 hover:text-destructive z-10"
+              onClick={() => setMenuItem({ path: node.path, name: node.name, type: 'directory', childrenCount })}
+              className="sidebar-menu-item-action absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-accent z-10"
             >
-              <Trash2 className="size-3.5" />
+              <MoreHorizontal className="size-3.5" />
             </button>
         </div>
 
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认删除</AlertDialogTitle>
-              <AlertDialogDescription>
-                {hasChildren ? (
-                  <span className="text-destructive font-medium">
-                    文件夹「{node.name}」包含 {node.children?.length} 个项目，删除后将全部删除且无法恢复。确定要继续吗？
-                  </span>
-                ) : (
-                  `确定要删除 ${node.name} 吗？此操作无法撤销。`
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>取消</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => onDelete(node.path)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                删除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <FileItemMenu
+          item={menuItem}
+          onRenameRequest={onRenameRequest}
+          onMoveRequest={onMoveRequest}
+          onDelete={onDelete}
+        />
 
         <CollapsibleContent>
           <SidebarMenuSub>
@@ -211,6 +185,8 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
                 setExpandedPaths={setExpandedPaths}
                 onSelect={onSelect}
                 onDelete={onDelete}
+                onRenameRequest={onRenameRequest}
+                onMoveRequest={onMoveRequest}
                 onExpand={onExpand}
                 editingType={editingType}
                 onEditingChange={onEditingChange}
@@ -259,7 +235,7 @@ const EMPTY_STATE = (
   </div>
 )
 
-export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onExpand, editingType, onEditingChange, onCreateSubmit }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit }: FileTreeProps) {
   const [editName, setEditName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -327,6 +303,8 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                   setExpandedPaths={setExpandedPaths}
                   onSelect={onSelect}
                   onDelete={onDelete}
+                  onRenameRequest={onRenameRequest}
+                  onMoveRequest={onMoveRequest}
                   onExpand={onExpand}
                   editingType={editingType}
                   onEditingChange={onEditingChange}

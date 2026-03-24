@@ -7,6 +7,8 @@ import { FileTree } from './components/FileTree'
 import { TipTapEditor } from './components/TipTapEditor'
 import { CreateFileModal } from './components/CreateFileModal'
 import { SearchDialog } from './components/SearchDialog'
+import { RenameDialog } from './components/RenameDialog'
+import { MoveFileModal } from './components/MoveFileModal'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import {
@@ -36,6 +38,8 @@ interface SidebarContentProps {
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory') => void
   onDelete: (path: string) => void
+  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
@@ -52,6 +56,8 @@ const SidebarContent = memo(function SidebarContent({
   setExpandedPaths,
   onSelect,
   onDelete,
+  onRenameRequest,
+  onMoveRequest,
   onExpand,
   editingType,
   onEditingChange,
@@ -90,6 +96,8 @@ const SidebarContent = memo(function SidebarContent({
         setExpandedPaths={setExpandedPaths}
         onSelect={onSelect}
         onDelete={onDelete}
+        onRenameRequest={onRenameRequest}
+        onMoveRequest={onMoveRequest}
         onExpand={onExpand}
         editingType={editingType}
         onEditingChange={onEditingChange}
@@ -104,6 +112,10 @@ function App() {
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [moveModalOpen, setMoveModalOpen] = useState(false)
+  const [renameItem, setRenameItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
+  const [moveItem, setMoveItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
@@ -311,6 +323,68 @@ function App() {
     }
   }, [fetchFiles, path])
 
+  const handleRename = useCallback(async (filePath: string, newName: string) => {
+    try {
+      const parentPath = filePath.substring(0, filePath.lastIndexOf('/'))
+      const oldName = filePath.split('/').pop() || ''
+      const oldPath = filePath
+      const isDirectory = !oldName.includes('.')
+      const newFileName = isDirectory ? newName : `${newName}.md`
+      const newPath = parentPath ? `${parentPath}/${newFileName}` : `/${newFileName}`
+
+      await fetch('/api/files', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldPath,
+          newPath,
+          isDirectory,
+        }),
+      })
+
+      if (path && (path === filePath || path.startsWith(filePath + '/'))) {
+        const updatedPath = path.replace(filePath, newPath)
+        loadingRef.current = null
+        window.location.hash = updatedPath
+        load(updatedPath)
+        setCurrentDir(parentPath ? parentPath : '')
+      }
+      fetchFiles()
+    } catch (e) {
+      console.error('Failed to rename:', e)
+    }
+  }, [path, load, fetchFiles])
+
+  const handleMove = useCallback(async (oldPath: string, newParentPath: string) => {
+    try {
+      const fileName = oldPath.split('/').pop() || ''
+      const oldParentPath = oldPath.substring(0, oldPath.lastIndexOf('/'))
+      const isDirectory = !fileName.includes('.')
+      const newPath = newParentPath ? `${newParentPath}/${fileName}` : `/${fileName}`
+
+      await fetch('/api/files', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldPath,
+          newPath,
+          isDirectory,
+        }),
+      })
+
+      if (path && (path === oldPath || path.startsWith(oldPath + '/'))) {
+        const updatedPath = path.replace(oldPath, newPath)
+        loadingRef.current = null
+        window.location.hash = updatedPath
+        load(updatedPath)
+        setCurrentDir(newParentPath ? newParentPath : '')
+      }
+      fetchFiles()
+    } catch (e) {
+      console.error('Failed to move:', e)
+    }
+  }, [path, load, fetchFiles])
+
   const handleCreateFile = useCallback(async (name: string, isDirectory: boolean, parentPath: string) => {
     try {
       const fileName = isDirectory ? name : `${name}.md`
@@ -386,6 +460,14 @@ function App() {
                 setExpandedPaths={setExpandedPaths}
                 onSelect={handleSelectFile}
                 onDelete={handleDeleteFile}
+                onRenameRequest={(item) => {
+                  setRenameItem(item)
+                  setRenameDialogOpen(true)
+                }}
+                onMoveRequest={(item) => {
+                  setMoveItem(item)
+                  setMoveModalOpen(true)
+                }}
                 onExpand={handleExpand}
                 editingType={editingType}
                 onEditingChange={handleEditingChange}
@@ -407,6 +489,14 @@ function App() {
               setExpandedPaths={setExpandedPaths}
               onSelect={handleSelectFile}
               onDelete={handleDeleteFile}
+              onRenameRequest={(item) => {
+                setRenameItem(item)
+                setRenameDialogOpen(true)
+              }}
+              onMoveRequest={(item) => {
+                setMoveItem(item)
+                setMoveModalOpen(true)
+              }}
               onExpand={handleExpand}
               editingType={editingType}
               onEditingChange={handleEditingChange}
@@ -484,6 +574,29 @@ function App() {
         onOpenChange={setSearchDialogOpen}
         files={files}
         onSelect={(path) => handleSelectFile(path, 'file')}
+      />
+
+      <RenameDialog
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        item={renameItem}
+        onRename={(oldPath, newName) => {
+          setRenameItem(null)
+          setRenameDialogOpen(false)
+          handleRename(oldPath, newName)
+        }}
+      />
+
+      <MoveFileModal
+        open={moveModalOpen}
+        onOpenChange={setMoveModalOpen}
+        item={moveItem}
+        files={files}
+        onMove={(oldPath, newParentPath) => {
+          setMoveItem(null)
+          setMoveModalOpen(false)
+          handleMove(oldPath, newParentPath)
+        }}
       />
 
       <AlertDialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
