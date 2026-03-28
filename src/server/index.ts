@@ -76,7 +76,7 @@ async function main() {
     },
   })
 
-  console.log(`\n  ColonyDoc is running!\n`)
+  console.log(`\n  ColonyNote is running!\n`)
   console.log(`  Local:   http://localhost:${config.port}`)
   console.log(`  Network: http://${config.host}:${config.port}`)
   console.log(`  Root:    ${config.root}\n`)

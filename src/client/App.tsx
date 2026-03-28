@@ -77,7 +77,7 @@ const SidebarContent = memo(function SidebarContent({
               <X className="size-4" />
             </Button>
           )}
-          <span className="font-semibold text-sm">ColonyDoc</span>
+          <span className="font-semibold text-sm">ColonyNote</span>
         </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={onSettingsOpen} title="设置">
@@ -446,7 +446,7 @@ function App() {
   const fileName = path ? path.split('/').pop() : null
 
   useEffect(() => {
-    document.title = fileName ? `${fileName} - ColonyDoc` : 'ColonyDoc'
+    document.title = fileName ? `${fileName} - ColonyNote` : 'ColonyNote'
   }, [fileName])
 
   return (
@@ -457,7 +457,7 @@ function App() {
             <List className="size-5" />
           </Button>
           <div className="flex-1 text-base font-semibold text-center truncate mx-4">
-            {fileName || 'ColonyDoc'}
+            {fileName || 'ColonyNote'}
           </div>
           <Button variant="ghost" size="icon" onClick={() => setSearchDialogOpen(true)}>
             <Search className="size-5" />
