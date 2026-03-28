@@ -41,7 +41,7 @@ for (let i = 0; i < argv.length; i++) {
     }
   } else {
     console.error(`Unknown argument: ${arg}`)
-    console.error(`Run 'colonydoc --help' for usage.`)
+    console.error(`Run 'colonynote --help' for usage.`)
     process.exit(1)
   }
 }
@@ -49,17 +49,17 @@ for (let i = 0; i < argv.length; i++) {
 for (const key of Object.keys(args)) {
   if (!validOptions.has(key)) {
     console.error(`Unknown option: --${key}`)
-    console.error(`Run 'colonydoc --help' for usage.`)
+    console.error(`Run 'colonynote --help' for usage.`)
     process.exit(1)
   }
 }
 
 if (args.h || args.help) {
   console.log(`
-colonydoc - Markdown online editor
+colonynote - Markdown online editor
 
 Usage:
-  colonydoc [options]
+  colonynote [options]
 
 Options:
   -r, --root <path>      Root directory (default: current directory)
@@ -73,7 +73,7 @@ Options:
 }
 
 if (args.version) {
-  console.log(`colonydoc v${pkg.version}`)
+  console.log(`colonynote v${pkg.version}`)
   process.exit(0)
 }
 
@@ -155,7 +155,7 @@ async function main() {
     },
   })
 
-  console.log(`\n  ColonyDoc is running!\n`)
+  console.log(`\n  ColonyNote is running!\n`)
   console.log(`  Local:   http://localhost:${config.port}`)
   console.log(`  Network: http://${config.host}:${config.port}`)
   console.log(`  Root:    ${config.root}\n`)

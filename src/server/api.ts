@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
 import fs from 'fs/promises'
 import path from 'path'
-import type { ColonydocConfig } from '../config.js'
+import type { ColonynoteConfig } from '../config.js'
 import { saveUserConfig } from '../config.js'
 
 declare module 'hono' {
   interface ContextVariableMap {
-    config: ColonydocConfig
+    config: ColonynoteConfig
   }
 }
 
@@ -17,7 +17,7 @@ interface FileNode {
   children?: FileNode[]
 }
 
-function isAllowed(pathStr: string, config: ColonydocConfig): boolean {
+function isAllowed(pathStr: string, config: ColonynoteConfig): boolean {
   const resolved = path.resolve(pathStr)
   return resolved.startsWith(path.resolve(config.root))
 }
@@ -27,7 +27,7 @@ function hasAllowedExtension(filename: string, extensions: string[]): boolean {
   return extensions.includes(ext)
 }
 
-async function walkDirectory(dir: string, config: ColonydocConfig): Promise<FileNode[]> {
+async function walkDirectory(dir: string, config: ColonynoteConfig): Promise<FileNode[]> {
   const nodes: FileNode[] = []
   
   try {
@@ -69,7 +69,7 @@ async function walkDirectory(dir: string, config: ColonydocConfig): Promise<File
   return nodes
 }
 
-export function createFileRouter(config: ColonydocConfig) {
+export function createFileRouter(config: ColonynoteConfig) {
   const router = new Hono()
 
   router.get('/config', async (c) => {

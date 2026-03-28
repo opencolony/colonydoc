@@ -1,11 +1,11 @@
 import chokidar from 'chokidar'
-import type { ColonydocConfig } from '../config.js'
+import type { ColonynoteConfig } from '../config.js'
 
 export interface WatcherCallbacks {
   onFileChange: (event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', path: string) => void
 }
 
-export function setupWatcher(config: ColonydocConfig, callbacks: WatcherCallbacks) {
+export function setupWatcher(config: ColonynoteConfig, callbacks: WatcherCallbacks) {
   const watcher = chokidar.watch(config.root, {
     ignored: (path) => {
       if (!config.showHiddenFiles && path.includes('/.') || path.startsWith('.')) return true

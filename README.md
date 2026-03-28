@@ -1,4 +1,4 @@
-# ColonyDoc
+# ColonyNote
 
 [简体中文](./README.zh.md) | English
 
@@ -20,7 +20,7 @@ A modern Markdown online editor with real-time preview, Mermaid diagrams, and La
 ## Installation
 
 ```bash
-npm install -g @opencolony/colonydoc
+npm install -g colonynote
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ npm install -g @opencolony/colonydoc
 ### Start the server
 
 ```bash
-colonydoc [options]
+colonynote [options]
 ```
 
 ### Options
@@ -38,7 +38,7 @@ colonydoc [options]
 | `--root` | `-r` | Root directory for documents | Current directory |
 | `--port` | `-p` | Server port | `5787` |
 | `--host` | | Server host | `0.0.0.0` |
-| `--config` | `-c` | Config file path | `colonydoc.config.js` |
+| `--config` | `-c` | Config file path | `colonynote.config.js` |
 | `--help` | `-h` | Show help | |
 | `--version` | | Show version | |
 
@@ -46,24 +46,24 @@ colonydoc [options]
 
 ```bash
 # Start with default settings
-colonydoc
+colonynote
 
 # Specify root directory
-colonydoc -r /path/to/docs
+colonynote -r /path/to/docs
 
 # Specify port
-colonydoc -p 3000
+colonynote -p 3000
 
 # Use config file
-colonydoc -c ./my-config.js
+colonynote -c ./my-config.js
 
 # Combine options
-colonydoc -r ./docs -p 8080
+colonynote -r ./docs -p 8080
 ```
 
 ## Configuration
 
-Create a `colonydoc.config.js` file in your project root:
+Create a `colonynote.config.js` file in your project root:
 
 ```javascript
 export default {
@@ -85,7 +85,7 @@ export default {
 
 ```bash
 # Clone the repository
-git clone https://github.com/opencolony/colonydoc.git
+git clone https://github.com/opencolony/note.git
 
 # Install dependencies
 npm install

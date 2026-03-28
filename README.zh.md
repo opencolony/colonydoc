@@ -1,4 +1,4 @@
-# ColonyDoc
+# ColonyNote
 
 [English](./README.md) | 简体中文
 
@@ -20,7 +20,7 @@
 ## 安装
 
 ```bash
-npm install -g @opencolony/colonydoc
+npm install -g colonynote
 ```
 
 ## 使用方法
@@ -28,7 +28,7 @@ npm install -g @opencolony/colonydoc
 ### 启动服务器
 
 ```bash
-colonydoc [选项]
+colonynote [选项]
 ```
 
 ### 选项
@@ -38,7 +38,7 @@ colonydoc [选项]
 | `--root` | `-r` | 文档根目录 | 当前目录 |
 | `--port` | `-p` | 服务器端口 | `5787` |
 | `--host` | | 服务器地址 | `0.0.0.0` |
-| `--config` | `-c` | 配置文件路径 | `colonydoc.config.js` |
+| `--config` | `-c` | 配置文件路径 | `colonynote.config.js` |
 | `--help` | `-h` | 显示帮助 | |
 | `--version` | | 显示版本 | |
 
@@ -46,24 +46,24 @@ colonydoc [选项]
 
 ```bash
 # 使用默认设置启动
-colonydoc
+colonynote
 
 # 指定根目录
-colonydoc -r /path/to/docs
+colonynote -r /path/to/docs
 
 # 指定端口
-colonydoc -p 3000
+colonynote -p 3000
 
 # 使用配置文件
-colonydoc -c ./my-config.js
+colonynote -c ./my-config.js
 
 # 组合选项
-colonydoc -r ./docs -p 8080
+colonynote -r ./docs -p 8080
 ```
 
 ## 配置
 
-在项目根目录创建 `colonydoc.config.js` 文件：
+在项目根目录创建 `colonynote.config.js` 文件：
 
 ```javascript
 export default {
@@ -85,7 +85,7 @@ export default {
 
 ```bash
 # 克隆仓库
-git clone https://github.com/opencolony/colonydoc.git
+git clone https://github.com/opencolony/note.git
 
 # 安装依赖
 npm install

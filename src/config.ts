@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import markdownExtensions from 'markdown-extensions'
 
-export interface ColonydocConfig {
+export interface ColonynoteConfig {
   root: string
   port: number
   host: string
@@ -17,7 +17,7 @@ export interface ColonydocConfig {
   }
 }
 
-const defaultConfig: ColonydocConfig = {
+const defaultConfig: ColonynoteConfig = {
   root: process.cwd(),
   port: 5787,
   host: '0.0.0.0',
@@ -32,14 +32,14 @@ const defaultConfig: ColonydocConfig = {
   },
 }
 
-export async function loadConfig(configPath?: string): Promise<ColonydocConfig> {
+export async function loadConfig(configPath?: string): Promise<ColonynoteConfig> {
   const config = { ...defaultConfig }
 
   const possiblePaths = configPath
     ? [configPath]
     : [
-        path.join(process.cwd(), 'colonydoc.config.js'),
-        path.join(process.cwd(), 'colonydoc.config.mjs'),
+        path.join(process.cwd(), 'colonynote.config.js'),
+        path.join(process.cwd(), 'colonynote.config.mjs'),
       ]
 
   for (const p of possiblePaths) {
@@ -61,7 +61,7 @@ export async function loadConfig(configPath?: string): Promise<ColonydocConfig> 
     }
   }
 
-  const userConfigPath = path.join(config.root, 'colonydoc.user.json')
+  const userConfigPath = path.join(config.root, 'colonynote.user.json')
   if (fs.existsSync(userConfigPath)) {
     try {
       const userSettings = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'))
@@ -82,7 +82,7 @@ export async function loadConfig(configPath?: string): Promise<ColonydocConfig> 
 }
 
 export function saveUserConfig(root: string, settings: { showHiddenFiles?: boolean; allowedExtensions?: string[] }): void {
-  const userConfigPath = path.join(root, 'colonydoc.user.json')
+  const userConfigPath = path.join(root, 'colonynote.user.json')
   try {
     let userSettings: Record<string, unknown> = {}
     if (fs.existsSync(userConfigPath)) {

@@ -7,7 +7,7 @@ vite.config.ts
 .git/
 .gitignore
 workspace/
-colonydoc.config.js
+colonynote.config.js
 node_modules/
 *.log
 .DS_Store

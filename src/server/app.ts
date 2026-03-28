@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import type { ColonydocConfig } from '../config.js'
+import type { ColonynoteConfig } from '../config.js'
 import { createFileRouter } from './api.js'
 
-export function createApp(config: ColonydocConfig) {
+export function createApp(config: ColonynoteConfig) {
   const app = new Hono()
 
   app.use('*', cors())

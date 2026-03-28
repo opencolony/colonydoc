@@ -1,6 +1,6 @@
 {
-  "name": "@opencolony/colonydoc",
-  "version": "1.0.0-beta.3",
+  "name": "colonynote",
+  "version": "1.0.0-beta.0",
   "engines": {
     "node": ">=18"
   },
@@ -21,11 +21,11 @@
   "author": "岳晓亮 <hi@yuexiaoliang.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/opencolony/colonydoc.git"
+    "url": "git+https://github.com/opencolony/note.git"
   },
   "type": "module",
   "bin": {
-    "colonydoc": "./bin/colonydoc.js"
+    "colonynote": "./bin/colonynote.js"
   },
   "files": [
     "bin",
