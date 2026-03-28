@@ -2,6 +2,7 @@ import { memo, SetStateAction, useState, useRef, useEffect } from 'react'
 import { ChevronRight, File, Folder, Trash2, FileText, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Input } from './ui/input'
+import { Button } from './ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible'
 import {
   SidebarGroup,
@@ -300,7 +301,29 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
     <div className="flex-1 overflow-y-auto overflow-x-auto">
       <div className="min-w-max">
         <SidebarGroup>
-          <SidebarGroupLabel>Files</SidebarGroupLabel>
+          <div className="flex items-center justify-between px-2">
+            <SidebarGroupLabel>Files</SidebarGroupLabel>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={() => onCreateRequest?.(false, currentDir || '')}
+                title="新建文件"
+              >
+                <FileText className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={() => onCreateRequest?.(true, currentDir || '')}
+                title="新建文件夹"
+              >
+                <Folder className="size-4" />
+              </Button>
+            </div>
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {files.map((node) => (
