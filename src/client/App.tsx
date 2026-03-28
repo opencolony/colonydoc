@@ -45,7 +45,7 @@ interface SidebarContentProps {
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
-  onSearchOpen?: () => void
+  onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
   onSettingsOpen?: () => void
   onClose?: () => void
 }
@@ -64,7 +64,7 @@ const SidebarContent = memo(function SidebarContent({
   editingType,
   onEditingChange,
   onCreateSubmit,
-  onSearchOpen,
+  onCreateRequest,
   onSettingsOpen,
   onClose,
 }: SidebarContentProps) {
@@ -80,17 +80,8 @@ const SidebarContent = memo(function SidebarContent({
           <span className="font-semibold text-sm">ColonyDoc</span>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={onSearchOpen} title="搜索">
-            <Search className="size-4" />
-          </Button>
           <Button variant="ghost" size="icon" onClick={onSettingsOpen} title="设置">
             <Settings className="size-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => onEditingChange?.('file')} title="新建文件">
-            <FileText className="size-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => onEditingChange?.('directory')} title="新建文件夹">
-            <Folder className="size-4" />
           </Button>
         </div>
       </div>
@@ -108,6 +99,7 @@ const SidebarContent = memo(function SidebarContent({
         editingType={editingType}
         onEditingChange={onEditingChange}
         onCreateSubmit={onCreateSubmit}
+        onCreateRequest={onCreateRequest}
       />
     </div>
   )
@@ -311,6 +303,21 @@ function App() {
     }
   }, [currentDir, fetchFiles])
 
+  const handleCreateRequest = useCallback((isDirectory: boolean, parentPath: string) => {
+    setEditingType(isDirectory ? 'directory' : 'file')
+    setCurrentDir(parentPath)
+    const parts = parentPath.split('/').filter(Boolean)
+    const toExpand = new Set<string>()
+    for (let i = 0; i < parts.length; i++) {
+      toExpand.add('/' + parts.slice(0, i + 1).join('/'))
+    }
+    setExpandedPaths(prev => {
+      const next = new Set(prev)
+      toExpand.forEach(p => next.add(p))
+      return next
+    })
+  }, [])
+
   useEffect(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1))
     if (hash && loadingRef.current !== hash) {
@@ -487,7 +494,7 @@ function App() {
                 editingType={editingType}
                 onEditingChange={handleEditingChange}
                 onCreateSubmit={handleCreateSubmit}
-                onSearchOpen={() => setSearchDialogOpen(true)}
+                onCreateRequest={handleCreateRequest}
                 onSettingsOpen={() => setSettingsDialogOpen(true)}
                 onClose={() => setDrawerVisible(false)}
               />
@@ -517,7 +524,7 @@ function App() {
               editingType={editingType}
               onEditingChange={handleEditingChange}
               onCreateSubmit={handleCreateSubmit}
-              onSearchOpen={() => setSearchDialogOpen(true)}
+              onCreateRequest={handleCreateRequest}
               onSettingsOpen={() => setSettingsDialogOpen(true)}
             />
           </aside>
@@ -536,6 +543,9 @@ function App() {
                 )}>
                   {status === 'saving' ? '保存中...' : status === 'saved' ? '已保存' : status === 'error' ? '保存失败' : ''}
                 </span>
+                <Button variant="ghost" size="icon" className="size-8" onClick={() => setSearchDialogOpen(true)} title="搜索">
+                  <Search className="size-4" />
+                </Button>
                 <Button variant="ghost" size="icon" className="size-8" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
                   {editorMode === 'wysiwyg' ? <Code className="size-4" /> : <Eye className="size-4" />}
                 </Button>
@@ -581,7 +591,10 @@ function App() {
 
       <CreateFileModal
         visible={createModalVisible}
-        onClose={() => setCreateModalVisible(false)}
+        onClose={() => {
+          setCreateModalVisible(false)
+          setEditingType(null)
+        }}
         onCreate={handleCreateFile}
         currentDir={currentDir}
       />

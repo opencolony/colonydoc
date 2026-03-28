@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MoreHorizontal, Trash2, Pencil, FolderInput, FileText, Folder } from 'lucide-react'
+import { MoreHorizontal, Trash2, Pencil, FolderInput, FileText, Folder, Plus } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet'
 import { Button } from './ui/button'
@@ -23,12 +23,14 @@ interface FileItem {
 
 interface FileItemMenuProps {
   item: FileItem | null
+  currentDir: string
   onRenameRequest: (item: FileItem) => void
   onMoveRequest: (item: FileItem) => void
   onDelete: (path: string) => void
+  onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
 }
 
-export function FileItemMenu({ item, onRenameRequest, onMoveRequest, onDelete }: FileItemMenuProps) {
+export function FileItemMenu({ item, currentDir, onRenameRequest, onMoveRequest, onDelete, onCreateRequest }: FileItemMenuProps) {
   const [open, setOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -84,6 +86,32 @@ export function FileItemMenu({ item, onRenameRequest, onMoveRequest, onDelete }:
             </SheetTitle>
           </SheetHeader>
           <div className="p-2">
+            <div className="flex gap-1 mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-1"
+                onClick={() => {
+                  onCreateRequest?.(false, item.type === 'directory' ? item.path : currentDir)
+                  handleClose()
+                }}
+              >
+                <Plus className="size-4" />
+                新建文件
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-1"
+                onClick={() => {
+                  onCreateRequest?.(true, item.type === 'directory' ? item.path : currentDir)
+                  handleClose()
+                }}
+              >
+                <Plus className="size-4" />
+                新建文件夹
+              </Button>
+            </div>
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"

@@ -45,9 +45,10 @@ interface FileTreeProps {
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
+  onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
 }
 
-function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit, currentDir }: {
+function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir }: {
   node: FileNode
   activePath: string | null
   expandedPaths: Set<string>
@@ -60,6 +61,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
+  onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
   currentDir: string
 }) {
   const [editName, setEditName] = useState('')
@@ -70,13 +72,13 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   const isExpanded = expandedPaths.has(node.path)
   const hasChildren = isDirectory && node.children && node.children.length > 0
   const childrenCount = node.children?.length || 0
-  const isCurrentDir = editingType && node.path === currentDir
-
   useEffect(() => {
-    if (isCurrentDir && inputRef.current) {
-      inputRef.current.focus()
+    if (editingType && node.path === currentDir) {
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 50)
     }
-  }, [isCurrentDir])
+  }, [editingType, currentDir])
 
   const handleEditSubmit = () => {
     if (editName.trim() && onCreateSubmit) {
@@ -119,9 +121,11 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
 
         <FileItemMenu
           item={menuItem}
+          currentDir={currentDir}
           onRenameRequest={onRenameRequest}
           onMoveRequest={onMoveRequest}
           onDelete={onDelete}
+          onCreateRequest={onCreateRequest}
         />
       </SidebarMenuItem>
     )
@@ -169,9 +173,11 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
 
         <FileItemMenu
           item={menuItem}
+          currentDir={currentDir}
           onRenameRequest={onRenameRequest}
           onMoveRequest={onMoveRequest}
           onDelete={onDelete}
+          onCreateRequest={onCreateRequest}
         />
 
         <CollapsibleContent>
@@ -191,6 +197,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
                 editingType={editingType}
                 onEditingChange={onEditingChange}
                 onCreateSubmit={onCreateSubmit}
+                onCreateRequest={onCreateRequest}
                 currentDir={currentDir}
               />
             ))}
@@ -203,6 +210,8 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
                     <FileText className="size-4 shrink-0 text-muted-foreground" />
                   )}
                   <Input
+                    ref={inputRef}
+                    id={`create-input-${node.path}`}
                     placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称'}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -235,7 +244,7 @@ const EMPTY_STATE = (
   </div>
 )
 
-export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest }: FileTreeProps) {
   const [editName, setEditName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -309,10 +318,11 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                   editingType={editingType}
                   onEditingChange={onEditingChange}
                   onCreateSubmit={onCreateSubmit}
+                  onCreateRequest={onCreateRequest}
                   currentDir={currentDir}
                 />
               ))}
-              {editingType && currentDir === '' && (
+              {editingType && (currentDir === '' || currentDir === '/') && (
                 <SidebarMenuItem className="sidebar-menu-item">
                   <div className="flex items-center gap-2 px-2 py-1.5 w-full">
                     {editingType === 'directory' ? (
@@ -321,13 +331,14 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                       <FileText className="size-4 shrink-0 text-muted-foreground" />
                     )}
                     <Input
-                      ref={inputRef}
+                      id="root-create-input"
                       placeholder={editingType === 'directory' ? '文件夹名称' : '文件名称'}
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={handleEditKeyDown}
                       onBlur={handleEditBlur}
                       className="h-7 text-sm"
+                      autoFocus
                     />
                   </div>
                 </SidebarMenuItem>
