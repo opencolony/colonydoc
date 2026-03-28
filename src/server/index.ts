@@ -30,6 +30,26 @@ async function main() {
     }
   })
 
+  app.get('/logo.png', async (c) => {
+    const fullPath = path.join(new URL('../client/logo.png', import.meta.url).pathname)
+    try {
+      const content = fs.readFileSync(fullPath)
+      return new Response(content, { headers: { 'Content-Type': 'image/png' } })
+    } catch {
+      return c.notFound()
+    }
+  })
+
+  app.get('/favicon.ico', async (c) => {
+    const fullPath = path.join(new URL('../client/favicon.ico', import.meta.url).pathname)
+    try {
+      const content = fs.readFileSync(fullPath)
+      return new Response(content, { headers: { 'Content-Type': 'image/x-icon' } })
+    } catch {
+      return c.notFound()
+    }
+  })
+
   app.get('*', async (c) => {
     const indexPath = path.join(new URL('../client', import.meta.url).pathname, 'index.html')
     try {
