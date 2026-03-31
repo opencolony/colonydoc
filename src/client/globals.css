@@ -43,32 +43,32 @@
 
 @theme {
   --color-background: oklch(100% 0 0);
-  --color-foreground: oklch(20% 0.02 264);
+  --color-foreground: oklch(15% 0 0);
   --color-card: oklch(100% 0 0);
-  --color-card-foreground: oklch(20% 0.02 264);
+  --color-card-foreground: oklch(15% 0 0);
   --color-popover: oklch(100% 0 0);
-  --color-popover-foreground: oklch(20% 0.02 264);
-  --color-primary: oklch(55% 0.22 264);
-  --color-primary-foreground: oklch(98% 0.01 264);
-  --color-secondary: oklch(96% 0.01 264);
-  --color-secondary-foreground: oklch(20% 0.02 264);
-  --color-muted: oklch(96% 0.01 264);
-  --color-muted-foreground: oklch(46% 0.02 264);
-  --color-accent: oklch(96% 0.01 264);
-  --color-accent-foreground: oklch(20% 0.02 264);
-  --color-destructive: oklch(55% 0.22 27);
-  --color-destructive-foreground: oklch(98% 0.01 264);
-  --color-border: oklch(91% 0.01 264);
-  --color-input: oklch(91% 0.01 264);
-  --color-ring: oklch(55% 0.22 264);
-  --color-sidebar: oklch(98% 0.01 264);
-  --color-sidebar-foreground: oklch(20% 0.02 264);
-  --color-sidebar-primary: oklch(55% 0.22 264);
-  --color-sidebar-primary-foreground: oklch(98% 0.01 264);
-  --color-sidebar-accent: oklch(96% 0.01 264);
-  --color-sidebar-accent-foreground: oklch(20% 0.02 264);
-  --color-sidebar-border: oklch(91% 0.01 264);
-  --color-sidebar-ring: oklch(55% 0.22 264);
+  --color-popover-foreground: oklch(15% 0 0);
+  --color-primary: oklch(25% 0 0);
+  --color-primary-foreground: oklch(98% 0 0);
+  --color-secondary: oklch(93% 0 0);
+  --color-secondary-foreground: oklch(15% 0 0);
+  --color-muted: oklch(90% 0 0);
+  --color-muted-foreground: oklch(50% 0 0);
+  --color-accent: oklch(93% 0 0);
+  --color-accent-foreground: oklch(15% 0 0);
+  --color-destructive: oklch(50% 0.15 25);
+  --color-destructive-foreground: oklch(98% 0 0);
+  --color-border: oklch(85% 0 0);
+  --color-input: oklch(85% 0 0);
+  --color-ring: oklch(25% 0 0);
+  --color-sidebar: oklch(97% 0 0);
+  --color-sidebar-foreground: oklch(15% 0 0);
+  --color-sidebar-primary: oklch(25% 0 0);
+  --color-sidebar-primary-foreground: oklch(98% 0 0);
+  --color-sidebar-accent: oklch(90% 0 0);
+  --color-sidebar-accent-foreground: oklch(15% 0 0);
+  --color-sidebar-border: oklch(85% 0 0);
+  --color-sidebar-ring: oklch(25% 0 0);
 
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
@@ -335,7 +335,7 @@
 .tiptap-editor .tiptap blockquote {
   @apply pl-4 py-2 my-4 rounded-r-lg;
   border-left: 4px solid var(--color-primary);
-  background: linear-gradient(90deg, oklch(55% 0.22 264 / 0.08) 0%, transparent 100%);
+  background: linear-gradient(90deg, oklch(25% 0 0 / 0.06) 0%, transparent 100%);
   font-style: italic;
 }
 
@@ -396,13 +396,13 @@
 }
 
 .tiptap-editor .tiptap ::selection {
-  background: oklch(55% 0.22 264 / 0.2);
+  background: oklch(25% 0 0 / 0.15);
 }
 
 /* Code Block Styles */
 .code-block-wrapper {
   @apply my-4 rounded-xl overflow-hidden;
-  background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
+  background: linear-gradient(135deg, oklch(97% 0 0) 0%, oklch(93% 0 0) 100%);
   border: 1px solid var(--color-border);
   box-shadow: 0 4px 6px -1px oklch(0% 0 0 / 0.05), 0 2px 4px -2px oklch(0% 0 0 / 0.05);
 }
@@ -416,7 +416,7 @@
 
 .code-block-wrapper.selected {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px oklch(55% 0.22 264 / 0.2);
+  box-shadow: 0 0 0 2px oklch(25% 0 0 / 0.15);
 }
 
 .code-block-header {
@@ -455,7 +455,7 @@
 .mermaid-preview {
   @apply w-full;
   padding: 12px;
-  background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
+  background: linear-gradient(135deg, oklch(97% 0 0) 0%, oklch(93% 0 0) 100%);
   position: relative;
   display: flex;
   align-items: center;
@@ -560,7 +560,7 @@
   @apply flex items-center justify-center overflow-hidden relative;
   flex: 1 1 auto;
   min-height: 200px;
-  background: linear-gradient(135deg, oklch(98% 0.01 264) 0%, oklch(96% 0.01 264) 100%);
+  background: linear-gradient(135deg, oklch(97% 0 0) 0%, oklch(93% 0 0) 100%);
 }
 
 .mermaid-fullscreen-chart {
@@ -721,7 +721,7 @@
 
 .tiptap-editor .tiptap th {
   @apply font-bold bg-muted;
-  background: linear-gradient(180deg, oklch(96% 0.01 264) 0%, oklch(91% 0.01 264) 100%);
+  background: linear-gradient(180deg, oklch(93% 0 0) 0%, oklch(85% 0 0) 100%);
 }
 
 .tiptap-editor .tiptap td {
