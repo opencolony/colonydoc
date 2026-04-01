@@ -130,6 +130,13 @@ function App() {
   const [isSaving, setIsSaving] = useState(false)
   const fetchingRef = useRef(false)
   const loadingRef = useRef<string | null>(null)
+  // 用于跟踪自己发起的保存会话，避免在网络差时误判为外部修改
+  // key: 文件路径, value: 保存会话ID集合
+  const pendingSaveSessionsRef = useRef<Map<string, Set<string>>>(new Map())
+  // 用于记录最近保存成功的时间戳，用于辅助判断是否是外部修改
+  const lastSelfSaveTimeRef = useRef<Map<string, number>>(new Map())
+  // 保存后忽略外部变更的缓冲时间（毫秒）
+  const SAVE_IGNORE_BUFFER_MS = 5000
 
   const {
     content,
@@ -141,10 +148,41 @@ function App() {
     setPath,
     setContent,
   } = useFile({
-    onSaveStart: () => setIsSaving(true),
-    onSave: () => setIsSaving(false),
-    onError: (e) => {
+    onSaveStart: (filePath: string, sessionId: string) => {
+      setIsSaving(true)
+      // 记录保存会话，用于区分自己保存和外部修改
+      const sessions = pendingSaveSessionsRef.current.get(filePath) || new Set<string>()
+      sessions.add(sessionId)
+      pendingSaveSessionsRef.current.set(filePath, sessions)
+      // 记录保存时间
+      lastSelfSaveTimeRef.current.set(filePath, Date.now())
+    },
+    onSave: (filePath?: string) => {
       setIsSaving(false)
+      const targetPath = filePath || path
+      if (!targetPath) return
+      // 延迟清除会话，以应对网络延迟导致的 WebSocket 消息延迟
+      setTimeout(() => {
+        const sessions = pendingSaveSessionsRef.current.get(targetPath)
+        if (sessions) {
+          // 保留较新的会话，只清除旧的
+          const now = Date.now()
+          const cutoffTime = now - SAVE_IGNORE_BUFFER_MS
+          const savedTime = lastSelfSaveTimeRef.current.get(targetPath)
+          if (savedTime && savedTime < cutoffTime) {
+            pendingSaveSessionsRef.current.delete(targetPath)
+            lastSelfSaveTimeRef.current.delete(targetPath)
+          }
+        }
+      }, SAVE_IGNORE_BUFFER_MS)
+    },
+    onError: (e, filePath?: string) => {
+      setIsSaving(false)
+      const targetPath = filePath || path
+      if (targetPath) {
+        pendingSaveSessionsRef.current.delete(targetPath)
+        lastSelfSaveTimeRef.current.delete(targetPath)
+      }
       console.error(e)
     },
   })
@@ -212,9 +250,26 @@ function App() {
   }, [fetchFiles])
 
   useWebSocket(useCallback((data) => {
-    if (data.type === 'file:change' && !isSaving) {
+    if (data.type === 'file:change') {
       const changedPath = data.path
       if (!changedPath) return
+
+      // 检查是否是用户自己保存的文件
+      // 双重验证机制：1. 检查会话ID集合  2. 检查最近保存时间戳
+      const sessions = pendingSaveSessionsRef.current.get(changedPath)
+      const lastSaveTime = lastSelfSaveTimeRef.current.get(changedPath)
+      const now = Date.now()
+
+      // 如果存在未过期的保存会话或最近保存时间在缓冲期内，则视为自己的保存
+      if (sessions && sessions.size > 0) {
+        // 有活动的保存会话，忽略此变更通知
+        return
+      }
+
+      // 即使会话已清除，如果在缓冲期内有保存操作，也忽略
+      if (lastSaveTime && (now - lastSaveTime) < SAVE_IGNORE_BUFFER_MS) {
+        return
+      }
 
       if (path && changedPath === path) {
         setPendingExternalChange(changedPath)
@@ -237,7 +292,7 @@ function App() {
 
       fetchFiles()
     }
-  }, [fetchFiles, isSaving, path, updateIndex, removeFromIndex]))
+  }, [fetchFiles, path, updateIndex, removeFromIndex]))
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory') => {
     if (type === 'file') {
