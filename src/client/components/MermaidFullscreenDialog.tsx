@@ -11,6 +11,7 @@ const isDarkMode = () => document.documentElement.classList.contains('dark')
 mermaid.initialize({
   startOnLoad: false,
   theme: isDarkMode() ? 'dark' : 'default',
+  suppressErrorRendering: true,
 })
 
 interface MermaidFullscreenDialogProps {
@@ -72,6 +73,7 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange }: MermaidF
     mermaid.initialize({
       startOnLoad: false,
       theme: currentTheme,
+      suppressErrorRendering: true,
     })
 
     mermaid.render(mermaidIdRef.current, source)

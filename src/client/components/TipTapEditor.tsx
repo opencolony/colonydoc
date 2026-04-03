@@ -26,6 +26,7 @@ const isDarkMode = () => document.documentElement.classList.contains('dark')
 mermaid.initialize({
   startOnLoad: false,
   theme: isDarkMode() ? 'dark' : 'default',
+  suppressErrorRendering: true,
 })
 
 const lowlight = createLowlight(common)
@@ -78,6 +79,7 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
       mermaid.initialize({
         startOnLoad: false,
         theme: currentTheme,
+        suppressErrorRendering: true,
       })
     }
 

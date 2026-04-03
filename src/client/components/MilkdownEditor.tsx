@@ -5,9 +5,10 @@ import '@milkdown/crepe/theme/frame.css'
 import 'katex/dist/katex.min.css'
 import mermaid from 'mermaid'
 
-mermaid.initialize({ 
-  startOnLoad: false, 
-  theme: 'default'
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'default',
+  suppressErrorRendering: true,
 })
 
 
