@@ -31,7 +31,7 @@ interface SettingsState {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [settings, setSettings] = React.useState<SettingsState>({
     showHiddenFiles: false,
-    allowedExtensions: '',
+    allowedExtensions: '.md,.markdown,.mdown,.mkdn,.mkd,.mdwn,.mkdown,.ron',
     themeMode: 'system',
     ignore: {
       enableIgnoreFiles: true,

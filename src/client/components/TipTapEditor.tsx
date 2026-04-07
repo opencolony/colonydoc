@@ -188,7 +188,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
         placeholder: placeholder || '在这里输入 Markdown...',
       }),
       Markdown.configure({
-        html: false,
+        html: true,
         transformPastedText: true,
         transformCopiedText: true,
       }),

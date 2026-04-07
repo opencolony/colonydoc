@@ -801,6 +801,96 @@
   @apply float-left text-muted-foreground pointer-events-none h-0;
 }
 
+/* HTML Elements - Details & Summary */
+.tiptap-editor .tiptap details {
+  @apply my-4 rounded-lg border border-border bg-muted/30 overflow-hidden;
+}
+
+.tiptap-editor .tiptap summary {
+  @apply px-4 py-3 font-medium cursor-pointer select-none flex items-center gap-2;
+  @apply bg-muted/50 hover:bg-muted transition-colors;
+  list-style: none;
+}
+
+.tiptap-editor .tiptap summary::-webkit-details-marker {
+  display: none;
+}
+
+.tiptap-editor .tiptap summary::before {
+  content: '▶';
+  @apply text-xs text-muted-foreground transition-transform duration-200;
+}
+
+.tiptap-editor .tiptap details[open] summary::before {
+  content: '▼';
+}
+
+.tiptap-editor .tiptap details > *:not(summary) {
+  @apply px-4 py-3;
+}
+
+.tiptap-editor .tiptap details > *:not(summary):first-of-type {
+  @apply pt-2;
+}
+
+/* HTML Elements - Definition Lists */
+.tiptap-editor .tiptap dl {
+  @apply my-4;
+}
+
+.tiptap-editor .tiptap dt {
+  @apply font-semibold mt-4 mb-1 text-foreground;
+}
+
+.tiptap-editor .tiptap dd {
+  @apply ml-4 mb-2 text-muted-foreground;
+}
+
+/* HTML Elements - Abbreviations */
+.tiptap-editor .tiptap abbr {
+  @apply cursor-help border-b border-dotted border-muted-foreground;
+}
+
+/* HTML Elements - Keyboard */
+.tiptap-editor .tiptap kbd {
+  @apply px-2 py-0.5 text-xs font-mono rounded bg-muted border border-border shadow-sm;
+}
+
+/* HTML Elements - Mark/Highlight */
+.tiptap-editor .tiptap mark {
+  @apply px-1 rounded;
+  background: linear-gradient(135deg, oklch(85% 0.15 80) 0%, oklch(90% 0.12 80) 100%);
+}
+
+.dark .tiptap-editor .tiptap mark {
+  background: linear-gradient(135deg, oklch(55% 0.15 80) 0%, oklch(60% 0.12 80) 100%);
+}
+
+/* HTML Elements - Subscript & Superscript */
+.tiptap-editor .tiptap sub,
+.tiptap-editor .tiptap sup {
+  @apply text-xs;
+}
+
+/* HTML Elements - Small */
+.tiptap-editor .tiptap small {
+  @apply text-xs text-muted-foreground;
+}
+
+/* HTML Elements - Center */
+.tiptap-editor .tiptap center {
+  @apply block text-center;
+}
+
+/* HTML Elements - Figure & Figcaption */
+.tiptap-editor .tiptap figure {
+  @apply my-4;
+}
+
+.tiptap-editor .tiptap figcaption {
+  @apply text-sm text-muted-foreground text-center mt-2;
+}
+
 /* Dark Theme */
 .dark {
   --color-background: oklch(15% 0 0);
@@ -917,4 +1007,54 @@
 
 .dark .tiptap-editor .tiptap mark {
   background: linear-gradient(135deg, oklch(60% 0.15 50) 0%, oklch(65% 0.12 50) 100%);
+}
+
+/* Scrollbar Styles - Light Theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: oklch(95% 0 0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(70% 0 0);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(50% 0 0);
+}
+
+::-webkit-scrollbar-corner {
+  background: oklch(95% 0 0);
+}
+
+/* Scrollbar Styles - Dark Theme */
+.dark ::-webkit-scrollbar-track {
+  background: oklch(20% 0 0);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(40% 0 0);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(60% 0 0);
+}
+
+.dark ::-webkit-scrollbar-corner {
+  background: oklch(20% 0 0);
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(70% 0 0) oklch(95% 0 0);
+}
+
+.dark * {
+  scrollbar-color: oklch(40% 0 0) oklch(20% 0 0);
 }
