@@ -2,7 +2,7 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { createFileRouter } from './api.js'
-import { loadConfig } from '../config.js'
+import { loadConfig, DEFAULT_PORT, DEFAULT_HOST, type ColonynoteConfig } from '../config.js'
 import { setupWatcher } from './watcher.js'
 import { IgnoreMatcher } from './ignore.js'
 import { WebSocketServer, WebSocket } from 'ws'
@@ -13,10 +13,19 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const clientDir = path.join(__dirname, '..', 'client')
 
+function findRootForPath(filePath: string, config: ColonynoteConfig): string {
+  for (const root of config.roots) {
+    if (filePath.startsWith(root.path)) {
+      return root.path
+    }
+  }
+  return config.roots[0]?.path || ''
+}
+
 async function main() {
   const config = await loadConfig()
 
-  const matcher = new IgnoreMatcher(config.root, {
+  const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
@@ -75,8 +84,8 @@ async function main() {
 
   const server = serve({
     fetch: app.fetch,
-    port: config.port,
-    hostname: config.host,
+    port: DEFAULT_PORT,
+    hostname: DEFAULT_HOST,
   })
 
   const clients = new Set<WebSocket>()
@@ -96,9 +105,10 @@ async function main() {
   })
 
   setupWatcher(config, matcher, {
-    onFileChange: (event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
-      const relativePath = filePath.replace(config.root, '')
-      const message = JSON.stringify({ type: 'file:change', event, path: relativePath })
+    onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
+      const actualRootPath = findRootForPath(filePath, config)
+      const relativePath = filePath.replace(actualRootPath, '')
+      const message = JSON.stringify({ type: 'file:change', event, path: relativePath, rootPath: actualRootPath })
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message)
@@ -108,9 +118,9 @@ async function main() {
   })
 
   console.log(`\n  ColonyNote is running!\n`)
-  console.log(`  Local:   http://localhost:${config.port}`)
-  console.log(`  Network: http://${config.host}:${config.port}`)
-  console.log(`  Root:    ${config.root}\n`)
+  console.log(`  Local:   http://localhost:${DEFAULT_PORT}`)
+  console.log(`  Network: http://${DEFAULT_HOST}:${DEFAULT_PORT}`)
+  console.log(`  Roots:   ${config.roots.map(r => r.path).join(', ')}\n`)
 }
 
 main().catch((e) => {

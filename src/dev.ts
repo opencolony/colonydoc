@@ -13,36 +13,8 @@ import { IgnoreMatcher } from './server/ignore.js'
 
 async function main() {
   const config = await loadConfig()
-  config.port = 5788
-  config.root = process.cwd() + '/workspace'
 
-  const userConfigPath = path.join(config.root, 'colonynote.user.json')
-  if (fs.existsSync(userConfigPath)) {
-    try {
-      const userSettings = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'))
-      if (typeof userSettings.showHiddenFiles === 'boolean') {
-        config.showHiddenFiles = userSettings.showHiddenFiles
-      }
-      if (Array.isArray(userSettings.allowedExtensions)) {
-        config.allowedExtensions = userSettings.allowedExtensions
-      }
-      if (userSettings.ignore) {
-        if (typeof userSettings.ignore.enableIgnoreFiles === 'boolean') {
-          config.ignore.enableIgnoreFiles = userSettings.ignore.enableIgnoreFiles
-        }
-        if (Array.isArray(userSettings.ignore.ignoreFileNames)) {
-          config.ignore.ignoreFileNames = userSettings.ignore.ignoreFileNames
-        }
-        if (Array.isArray(userSettings.ignore.patterns)) {
-          config.ignore.patterns = userSettings.ignore.patterns
-        }
-      }
-    } catch (e) {
-      console.warn(`Failed to load user config from ${userConfigPath}:`, e)
-    }
-  }
-
-  const matcher = new IgnoreMatcher(config.root, {
+  const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
@@ -83,8 +55,8 @@ async function main() {
   })
 
   setupWatcher(config, matcher, {
-    onFileChange: (event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
-      const relativePath = filePath.replace(config.root, '')
+    onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
+      const relativePath = filePath.replace(rootPath, '')
       const message = JSON.stringify({ type: 'file:change', event, path: relativePath })
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {

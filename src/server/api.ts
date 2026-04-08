@@ -1,9 +1,11 @@
 import { Hono } from 'hono'
 import fs from 'fs/promises'
 import path from 'path'
-import type { ColonynoteConfig } from '../config.js'
-import { saveUserConfig } from '../config.js'
+import os from 'os'
+import type { ColonynoteConfig, RootConfig } from '../config.js'
+import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
+import { minimatch } from 'minimatch'
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -15,12 +17,48 @@ interface FileNode {
   name: string
   path: string
   type: 'file' | 'directory'
+  rootPath: string
   children?: FileNode[]
 }
 
 function isAllowed(pathStr: string, config: ColonynoteConfig): boolean {
   const resolved = path.resolve(pathStr)
-  return resolved.startsWith(path.resolve(config.root))
+  return config.roots.some(root => resolved.startsWith(path.resolve(root.path)))
+}
+
+function checkSensitivePath(inputPath: string): boolean {
+  const basename = path.basename(inputPath)
+  for (const pattern of DEFAULT_SENSITIVE_PATHS) {
+    if (minimatch(basename, pattern, { nocase: true, dot: true })) return true
+  }
+  return false
+}
+
+function checkNestedPath(newPath: string, existingRoots: RootConfig[]): {
+  isNested: boolean
+  conflictWith?: string
+  reason?: 'child' | 'parent' | 'duplicate'
+} {
+  const resolved = path.resolve(newPath)
+  for (const root of existingRoots) {
+    const existing = path.resolve(root.path)
+    if (resolved === existing) return { isNested: true, conflictWith: root.path, reason: 'duplicate' }
+    if (resolved.startsWith(existing + path.sep)) return { isNested: true, conflictWith: root.path, reason: 'child' }
+    if (existing.startsWith(resolved + path.sep)) return { isNested: true, conflictWith: root.path, reason: 'parent' }
+  }
+  return { isNested: false }
+}
+
+function findRootForPath(filePath: string, config: ColonynoteConfig): string | null {
+  for (const root of config.roots) {
+    const rootPath = path.resolve(root.path)
+    const fullPath = path.join(rootPath, filePath)
+    // Check if fullPath is within this root
+    if (fullPath.startsWith(rootPath + path.sep) || fullPath === rootPath) {
+      return rootPath
+    }
+  }
+  return null
 }
 
 function hasAllowedExtension(filename: string, extensions: string[]): boolean {
@@ -28,7 +66,7 @@ function hasAllowedExtension(filename: string, extensions: string[]): boolean {
   return extensions.includes(ext)
 }
 
-async function walkDirectory(dir: string, config: ColonynoteConfig, matcher: IgnoreMatcher): Promise<FileNode[]> {
+async function walkDirectory(dir: string, rootPath: string, config: ColonynoteConfig, matcher: IgnoreMatcher): Promise<FileNode[]> {
   const nodes: FileNode[] = []
 
   try {
@@ -42,25 +80,30 @@ async function walkDirectory(dir: string, config: ColonynoteConfig, matcher: Ign
       if (matcher.isIgnored(fullPath, isDir)) continue
 
       if (isDir) {
-        const children = await walkDirectory(fullPath, config, matcher)
+        const children = await walkDirectory(fullPath, rootPath, config, matcher)
         nodes.push({
           name: entry.name,
-          path: fullPath.replace(config.root, '').replace(/\\/g, '/'),
+          path: fullPath.replace(rootPath, '').replace(/\\/g, '/') || '/',
           type: 'directory',
+          rootPath,
           children,
         })
       } else if (entry.isFile()) {
         if (hasAllowedExtension(entry.name, config.allowedExtensions)) {
           nodes.push({
             name: entry.name,
-            path: fullPath.replace(config.root, '').replace(/\\/g, '/'),
+            path: fullPath.replace(rootPath, '').replace(/\\/g, '/') || '/',
             type: 'file',
+            rootPath,
           })
         }
       }
     }
   } catch (e) {
-    // ignore errors
+    // Re-throw error if this is the root directory, otherwise ignore
+    if (dir === rootPath) {
+      throw e
+    }
   }
 
   nodes.sort((a, b) => {
@@ -95,7 +138,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
         }
       }
 
-      saveUserConfig(config.root, updates)
+      saveConfig(config)
 
       if (typeof updates.showHiddenFiles === 'boolean') {
         config.showHiddenFiles = updates.showHiddenFiles
@@ -124,10 +167,115 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
+  // Root management routes
+  router.get('/roots', async (c) => {
+    return c.json({ roots: config.roots })
+  })
+
+  router.post('/roots', async (c) => {
+    try {
+      const body = await c.req.json()
+      const newPath = body.path
+      if (!newPath) return c.json({ error: 'Path is required' }, 400)
+
+      try {
+        const stat = await fs.stat(newPath)
+        if (!stat.isDirectory()) return c.json({ error: 'Path must be a directory' }, 400)
+      } catch {
+        return c.json({ error: 'Path does not exist' }, 400)
+      }
+
+      if (checkSensitivePath(newPath)) return c.json({ error: 'Sensitive path not allowed' }, 400)
+
+      const nested = checkNestedPath(newPath, config.roots)
+      if (nested.isNested) return c.json({ error: 'Nested path not allowed', conflictWith: nested.conflictWith, reason: nested.reason }, 400)
+
+      const newRoot: RootConfig = { path: path.resolve(newPath), exclude: body.exclude }
+      config.roots.push(newRoot)
+      saveConfig(config)
+      return c.json({ success: true, root: newRoot })
+    } catch (e) {
+      return c.json({ error: 'Failed to add root' }, 500)
+    }
+  })
+
+  router.delete('/roots', async (c) => {
+    const pathParam = c.req.query('path')
+    if (!pathParam) return c.json({ error: 'path parameter required' }, 400)
+
+    const idx = config.roots.findIndex(r => path.resolve(r.path) === path.resolve(pathParam))
+    if (idx === -1) return c.json({ error: 'Root not found' }, 404)
+
+    config.roots.splice(idx, 1)
+    saveConfig(config)
+    return c.json({ success: true })
+  })
+
+  router.patch('/roots', async (c) => {
+    try {
+      const body = await c.req.json()
+      const { path: rootPath, exclude } = body
+      if (!rootPath) return c.json({ error: 'Path is required' }, 400)
+
+      const root = config.roots.find(r => path.resolve(r.path) === path.resolve(rootPath))
+      if (!root) return c.json({ error: 'Root not found' }, 404)
+
+      if (exclude !== undefined) root.exclude = exclude
+      saveConfig(config)
+      return c.json({ success: true, root })
+    } catch (e) {
+      return c.json({ error: 'Failed to update root' }, 500)
+    }
+  })
+
+  // Fuzzy search
+  router.get('/roots/search', async (c) => {
+    const query = c.req.query('q') || ''
+    if (!query.trim()) return c.json({ matches: [] })
+
+    const matches: string[] = []
+    const searchRoot = query.startsWith('/') ? query : os.homedir()
+    const pattern = `*${query}*`
+
+    async function traverse(dir: string, depth: number): Promise<void> {
+      if (depth > 3 || matches.length >= 20) return
+      try {
+        const entries = await fs.readdir(dir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (matches.length >= 20) break
+          if (entry.name.startsWith('.')) continue
+          const fullPath = path.join(dir, entry.name)
+          if (entry.isDirectory() && !checkSensitivePath(fullPath)) {
+            if (minimatch(entry.name, pattern, { nocase: true })) matches.push(fullPath)
+            await traverse(fullPath, depth + 1)
+          }
+        }
+      } catch {}
+    }
+
+    await traverse(searchRoot, 0)
+    return c.json({ matches })
+  })
+
   router.get('/', async (c) => {
     try {
-      const files = await walkDirectory(config.root, config, matcher)
-      return c.json({ files })
+      const groups = await Promise.all(
+        config.roots.map(async (root) => {
+          try {
+            return {
+              root,
+              files: await walkDirectory(root.path, root.path, config, matcher)
+            }
+          } catch (e) {
+            return {
+              root,
+              files: [],
+              error: e instanceof Error ? e.message : 'Failed to read directory'
+            }
+          }
+        })
+      )
+      return c.json({ groups })
     } catch (e) {
       return c.json({ error: 'Failed to read directory' }, 500)
     }
@@ -143,8 +291,10 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     const results: { path: string; name: string; content: string }[] = []
 
     for (const filePath of paths) {
-      const fullPath = path.join(config.root, filePath)
-      
+      const rootPath = findRootForPath(filePath, config)
+      if (!rootPath) continue
+      const fullPath = path.join(rootPath, filePath)
+
       if (!isAllowed(fullPath, config)) {
         continue
       }
@@ -169,22 +319,50 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
   router.get('/*', async (c) => {
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
-    const fullPath = path.join(config.root, filePath)
-    
+
+    // Handle root path - return grouped file tree
+    if (filePath === '/' || filePath === '') {
+      try {
+        const groups = await Promise.all(
+          config.roots.map(async (root) => {
+            try {
+              return {
+                root,
+                files: await walkDirectory(root.path, root.path, config, matcher)
+              }
+            } catch (e) {
+              return {
+                root,
+                files: [],
+                error: e instanceof Error ? e.message : 'Failed to read directory'
+              }
+            }
+          })
+        )
+        return c.json({ groups })
+      } catch (e) {
+        return c.json({ error: 'Failed to read directory' }, 500)
+      }
+    }
+
+    const rootPath = findRootForPath(filePath, config)
+    if (!rootPath) return c.json({ error: 'Access denied' }, 403)
+    const fullPath = path.join(rootPath, filePath)
+
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
     }
-    
+
     try {
       const stat = await fs.stat(fullPath)
       if (stat.isDirectory()) {
-        const files = await walkDirectory(fullPath, config, matcher)
+        const files = await walkDirectory(fullPath, rootPath, config, matcher)
         return c.json({ files })
       }
     } catch (e) {
       // not a directory
     }
-    
+
     try {
       const content = await fs.readFile(fullPath, 'utf-8')
       return c.text(content)
@@ -195,26 +373,30 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
   router.post('/*', async (c) => {
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
-    const fullPath = path.join(config.root, filePath)
-    
+    const rootPath = findRootForPath(filePath, config)
+    if (!rootPath) return c.json({ error: 'Access denied' }, 403)
+    const fullPath = path.join(rootPath, filePath)
+
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
     }
-    
+
     const contentType = c.req.header('Content-Type') || ''
-    
+
     if (contentType.includes('application/json')) {
       const body = await c.req.json()
-      
+
       if (body.type === 'create') {
         const parentPath = body.parentPath || ''
         const name = body.name
-        const targetPath = path.join(config.root, parentPath, name)
-        
+        const parentRootPath = findRootForPath(parentPath, config)
+        if (!parentRootPath) return c.json({ error: 'Access denied' }, 403)
+        const targetPath = path.join(parentRootPath, parentPath, name)
+
         if (!isAllowed(targetPath, config)) {
           return c.json({ error: 'Access denied' }, 403)
         }
-        
+
         try {
           if (body.isDirectory) {
             await fs.mkdir(targetPath, { recursive: true })
@@ -224,13 +406,13 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
             }
             await fs.writeFile(targetPath, '', 'utf-8')
           }
-          return c.json({ success: true, path: targetPath.replace(config.root, '') })
+          return c.json({ success: true, path: targetPath.replace(parentRootPath, '') })
         } catch (e) {
           return c.json({ error: 'Failed to create' }, 500)
         }
       }
     }
-    
+
     try {
       await fs.mkdir(path.dirname(fullPath), { recursive: true })
       const content = await c.req.text()
@@ -243,7 +425,9 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
   router.put('/*', async (c) => {
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
-    const fullPath = path.join(config.root, filePath)
+    const rootPath = findRootForPath(filePath, config)
+    if (!rootPath) return c.json({ error: 'Access denied' }, 403)
+    const fullPath = path.join(rootPath, filePath)
 
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
@@ -257,8 +441,11 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
         return c.json({ error: 'oldPath and newPath are required' }, 400)
       }
 
-      const oldFullPath = path.join(config.root, oldPath)
-      const newFullPath = path.join(config.root, newPath)
+      const oldRootPath = findRootForPath(oldPath, config)
+      const newRootPath = findRootForPath(newPath, config)
+      if (!oldRootPath || !newRootPath) return c.json({ error: 'Access denied' }, 403)
+      const oldFullPath = path.join(oldRootPath, oldPath)
+      const newFullPath = path.join(newRootPath, newPath)
 
       if (!isAllowed(oldFullPath, config) || !isAllowed(newFullPath, config)) {
         return c.json({ error: 'Access denied' }, 403)
@@ -285,9 +472,51 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
+  router.post('/copy', async (c) => {
+    try {
+      const body = await c.req.json()
+      let { sourcePath, targetPath } = body
+
+      if (!sourcePath || !targetPath) {
+        return c.json({ error: 'sourcePath and targetPath required' }, 400)
+      }
+
+      const srcRoot = findRootForPath(sourcePath, config)
+      const tgtRoot = findRootForPath(targetPath, config)
+      if (!srcRoot || !tgtRoot) return c.json({ error: 'Access denied' }, 403)
+
+      let srcFullPath = path.join(srcRoot, sourcePath)
+      let tgtFullPath = path.join(tgtRoot, targetPath)
+
+      const stat = await fs.stat(srcFullPath)
+
+      const targetExists = await fs.access(tgtFullPath).then(() => true).catch(() => false)
+      if (targetExists) {
+        const ext = path.extname(targetPath)
+        const base = path.basename(targetPath, ext)
+        const dir = path.dirname(targetPath)
+        targetPath = `${dir}/${base} (copy)${ext}`
+        tgtFullPath = path.join(tgtRoot, targetPath)
+      }
+
+      if (stat.isDirectory()) {
+        await fs.cp(srcFullPath, tgtFullPath, { recursive: true })
+      } else {
+        await fs.copyFile(srcFullPath, tgtFullPath)
+      }
+
+      return c.json({ success: true, newPath: targetPath })
+    } catch (e) {
+      console.error('Copy error:', e)
+      return c.json({ error: 'Failed to copy' }, 500)
+    }
+  })
+
   router.delete('/*', async (c) => {
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
-    const fullPath = path.join(config.root, filePath)
+    const rootPath = findRootForPath(filePath, config)
+    if (!rootPath) return c.json({ error: 'Access denied' }, 403)
+    const fullPath = path.join(rootPath, filePath)
 
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)

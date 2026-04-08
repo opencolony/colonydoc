@@ -35,6 +35,7 @@ interface FileNode {
 interface FileTreeProps {
   files: FileNode[]
   activePath: string | null
+  activeRoot: string | null
   currentDir: string
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
@@ -42,6 +43,7 @@ interface FileTreeProps {
   onDelete: (path: string) => void
   onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
@@ -49,7 +51,7 @@ interface FileTreeProps {
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
 }
 
-function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir }: {
+function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir }: {
   node: FileNode
   activePath: string | null
   expandedPaths: Set<string>
@@ -58,6 +60,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   onDelete: (path: string) => void
   onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
@@ -120,11 +123,12 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
             <MoreHorizontal className="size-3.5" />
           </button>
 
-        <FileItemMenu
+         <FileItemMenu
           item={menuItem}
           currentDir={currentDir}
           onRenameRequest={onRenameRequest}
           onMoveRequest={onMoveRequest}
+          onCopyRequest={onCopyRequest}
           onDelete={onDelete}
           onCreateRequest={onCreateRequest}
         />
@@ -177,6 +181,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
           currentDir={currentDir}
           onRenameRequest={onRenameRequest}
           onMoveRequest={onMoveRequest}
+          onCopyRequest={onCopyRequest}
           onDelete={onDelete}
           onCreateRequest={onCreateRequest}
         />
@@ -194,6 +199,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
                 onDelete={onDelete}
                 onRenameRequest={onRenameRequest}
                 onMoveRequest={onMoveRequest}
+                onCopyRequest={onCopyRequest}
                 onExpand={onExpand}
                 editingType={editingType}
                 onEditingChange={onEditingChange}
@@ -238,14 +244,20 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   )
 }
 
-const EMPTY_STATE = (
-  <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6">
-    <Folder className="size-12 mb-4 opacity-50" />
-    <div>暂无文件</div>
-  </div>
-)
+const EmptyState = ({ activeRoot }: { activeRoot: string | null }) => {
+  const rootName = activeRoot?.split('/').pop() || '根目录'
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6">
+      <Folder className="size-12 mb-4 opacity-50" />
+      <div className="mb-2">根目录「{rootName}」暂无文件</div>
+      <p className="text-xs">
+        点击上方「新建文件」按钮创建第一个文件
+      </p>
+    </div>
+  )
+}
 
-export const FileTree = memo(function FileTree({ files, activePath, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, activePath, activeRoot, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest }: FileTreeProps) {
   const [editName, setEditName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -292,7 +304,7 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
   if (files.length === 0 && !editingType) {
     return (
       <div className="flex-1 overflow-y-auto">
-        {EMPTY_STATE}
+        <EmptyState activeRoot={activeRoot} />
       </div>
     )
   }
@@ -337,6 +349,7 @@ export const FileTree = memo(function FileTree({ files, activePath, currentDir, 
                   onDelete={onDelete}
                   onRenameRequest={onRenameRequest}
                   onMoveRequest={onMoveRequest}
+                  onCopyRequest={onCopyRequest}
                   onExpand={onExpand}
                   editingType={editingType}
                   onEditingChange={onEditingChange}

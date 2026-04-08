@@ -1,11 +1,15 @@
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 import markdownExtensions from 'markdown-extensions'
 
+export interface RootConfig {
+  path: string
+  exclude?: string[]
+}
+
 export interface ColonynoteConfig {
-  root: string
-  port: number
-  host: string
+  roots: RootConfig[]
   allowedExtensions: string[]
   showHiddenFiles: boolean
   theme: {
@@ -22,10 +26,38 @@ export interface ColonynoteConfig {
   }
 }
 
+export const DEFAULT_PORT = 5787
+export const DEFAULT_HOST = '0.0.0.0'
+
+export const DEFAULT_SENSITIVE_PATHS = [
+  '.env',
+  '.env.local',
+  '.env.*.local',
+  '*.key',
+  '*.pem',
+  '*.p12',
+  '*.pfx',
+  'id_rsa',
+  'id_dsa',
+  'id_ecdsa',
+  'id_ed25519',
+  '.ssh/',
+  '.aws/',
+  '.docker/',
+  '.kube/',
+  'credentials',
+  'secrets',
+  '.htpasswd',
+  '.netrc',
+  '.npmrc',
+  '.pypirc',
+  'token',
+  'password',
+  'secret',
+]
+
 const defaultConfig: ColonynoteConfig = {
-  root: process.cwd(),
-  port: 5787,
-  host: '0.0.0.0',
+  roots: [{ path: process.cwd() }],
   allowedExtensions: markdownExtensions.map((ext) => `.${ext}`),
   showHiddenFiles: false,
   theme: {
@@ -42,98 +74,70 @@ const defaultConfig: ColonynoteConfig = {
   },
 }
 
-export async function loadConfig(configPath?: string): Promise<ColonynoteConfig> {
+export async function loadConfig(): Promise<ColonynoteConfig> {
   const config = { ...defaultConfig }
+  const homeDir = os.homedir()
+  const colonynoteDir = path.join(homeDir, '.colonynote')
+  const configPath = path.join(colonynoteDir, 'config.json')
 
-  const possiblePaths = configPath
-    ? [configPath]
-    : [
-        path.join(process.cwd(), 'colonynote.config.js'),
-        path.join(process.cwd(), 'colonynote.config.mjs'),
-      ]
-
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      try {
-        const module = await import(p)
-        const userConfig = module.default || module
-        Object.assign(config, userConfig)
-        if (userConfig.theme) {
-          config.theme = { ...defaultConfig.theme, ...userConfig.theme }
-        }
-      if (userConfig.editor) {
-        config.editor = { ...defaultConfig.editor, ...userConfig.editor }
-      }
-      if (userConfig.ignore) {
-        config.ignore = { ...defaultConfig.ignore, ...userConfig.ignore }
-      }
-      break
-      } catch (e) {
-        console.warn(`Failed to load config from ${p}:`, e)
-      }
-    }
-  }
-
-  const userConfigPath = path.join(config.root, 'colonynote.user.json')
-  if (fs.existsSync(userConfigPath)) {
+  if (fs.existsSync(configPath)) {
     try {
-      const userSettings = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'))
-      if (typeof userSettings.showHiddenFiles === 'boolean') {
-        config.showHiddenFiles = userSettings.showHiddenFiles
+      const content = fs.readFileSync(configPath, 'utf-8')
+      const userConfig = JSON.parse(content)
+
+      // Handle legacy 'root' field (singular) -> convert to 'roots' array
+      if (userConfig.root && !userConfig.roots) {
+        userConfig.roots = [{ path: userConfig.root }]
+        delete userConfig.root
       }
-      if (Array.isArray(userSettings.allowedExtensions)) {
-        config.allowedExtensions = userSettings.allowedExtensions
+
+      // Merge user config, filtering out invalid fields
+      const validFields = ['roots', 'showHiddenFiles', 'allowedExtensions', 'theme', 'editor', 'ignore']
+      for (const field of validFields) {
+        if (field in userConfig) {
+          if (field === 'roots' && Array.isArray(userConfig.roots)) {
+            config.roots = userConfig.roots
+          } else if (field === 'showHiddenFiles' && typeof userConfig.showHiddenFiles === 'boolean') {
+            config.showHiddenFiles = userConfig.showHiddenFiles
+          } else if (field === 'allowedExtensions' && Array.isArray(userConfig.allowedExtensions)) {
+            config.allowedExtensions = userConfig.allowedExtensions
+          } else if (field === 'theme' && typeof userConfig.theme === 'object') {
+            config.theme = { ...defaultConfig.theme, ...userConfig.theme }
+          } else if (field === 'editor' && typeof userConfig.editor === 'object') {
+            config.editor = { ...defaultConfig.editor, ...userConfig.editor }
+          } else if (field === 'ignore' && typeof userConfig.ignore === 'object') {
+            config.ignore = { ...defaultConfig.ignore, ...userConfig.ignore }
+          }
+        }
       }
-      if (userSettings.ignore) {
-        if (typeof userSettings.ignore.enableIgnoreFiles === 'boolean') {
-          config.ignore.enableIgnoreFiles = userSettings.ignore.enableIgnoreFiles
-        }
-        if (Array.isArray(userSettings.ignore.ignoreFileNames)) {
-          config.ignore.ignoreFileNames = userSettings.ignore.ignoreFileNames
-        }
-        if (Array.isArray(userSettings.ignore.patterns)) {
-          config.ignore.patterns = userSettings.ignore.patterns
-        }
-      }
+
+      // Auto-fix: save cleaned config
+      saveConfig(config)
     } catch (e) {
-      console.warn(`Failed to load user config from ${userConfigPath}:`, e)
+      console.warn(`Failed to load config from ${configPath}:`, e)
+      console.log('Using default configuration')
     }
   }
 
-  config.root = path.resolve(config.root)
+  config.roots = config.roots.map((root) => ({
+    ...root,
+    path: path.resolve(root.path),
+  }))
 
   return config
 }
 
-export function saveUserConfig(root: string, settings: { showHiddenFiles?: boolean; allowedExtensions?: string[]; ignore?: { enableIgnoreFiles?: boolean; ignoreFileNames?: string[]; patterns?: string[] } }): void {
-  const userConfigPath = path.join(root, 'colonynote.user.json')
+export function saveConfig(config: ColonynoteConfig): void {
+  const homeDir = os.homedir()
+  const colonynoteDir = path.join(homeDir, '.colonynote')
+  const configPath = path.join(colonynoteDir, 'config.json')
   try {
-    let userSettings: Record<string, unknown> = {}
-    if (fs.existsSync(userConfigPath)) {
-      userSettings = JSON.parse(fs.readFileSync(userConfigPath, 'utf-8'))
+    if (!fs.existsSync(colonynoteDir)) {
+      fs.mkdirSync(colonynoteDir, { recursive: true })
     }
-    if (typeof settings.showHiddenFiles === 'boolean') {
-      userSettings.showHiddenFiles = settings.showHiddenFiles
-    }
-    if (Array.isArray(settings.allowedExtensions)) {
-      userSettings.allowedExtensions = settings.allowedExtensions
-    }
-    if (settings.ignore) {
-      const existingIgnore = (userSettings.ignore as Record<string, unknown> | undefined) || {}
-      if (typeof settings.ignore.enableIgnoreFiles === 'boolean') {
-        existingIgnore.enableIgnoreFiles = settings.ignore.enableIgnoreFiles
-      }
-      if (Array.isArray(settings.ignore.ignoreFileNames)) {
-        existingIgnore.ignoreFileNames = settings.ignore.ignoreFileNames
-      }
-      if (Array.isArray(settings.ignore.patterns)) {
-        existingIgnore.patterns = settings.ignore.patterns
-      }
-      userSettings.ignore = existingIgnore
-    }
-    fs.writeFileSync(userConfigPath, JSON.stringify(userSettings, null, 2), 'utf-8')
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
   } catch (e) {
-    console.error(`Failed to save user config to ${userConfigPath}:`, e)
+    console.error(`Failed to save config to ${configPath}:`, e)
     throw e
   }
 }

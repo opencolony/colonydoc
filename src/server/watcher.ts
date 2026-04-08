@@ -4,11 +4,12 @@ import type { ColonynoteConfig } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
 
 export interface WatcherCallbacks {
-  onFileChange: (event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', path: string) => void
+  onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', path: string) => void
 }
 
 export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, callbacks: WatcherCallbacks) {
-  const watcher = chokidar.watch(config.root, {
+  const rootPaths = config.roots.map(r => r.path)
+  const watcher = chokidar.watch(rootPaths, {
     ignored: (filePath: string) => {
       if (!config.showHiddenFiles && (filePath.includes('/.') || filePath.startsWith('.'))) return true
 
@@ -27,27 +28,29 @@ export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, c
     },
     persistent: true,
     ignoreInitial: true,
-    depth: 99,
+    depth: 3,
   })
+
+  const rootPath = config.roots[0]?.path || ''
 
   watcher
     .on('add', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        callbacks.onFileChange('add', path)
+        callbacks.onFileChange(rootPath, 'add', path)
       }
     })
     .on('change', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        callbacks.onFileChange('change', path)
+        callbacks.onFileChange(rootPath, 'change', path)
       }
     })
     .on('unlink', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        callbacks.onFileChange('unlink', path)
+        callbacks.onFileChange(rootPath, 'unlink', path)
       }
     })
-    .on('addDir', (path) => callbacks.onFileChange('addDir', path))
-    .on('unlinkDir', (path) => callbacks.onFileChange('unlinkDir', path))
+    .on('addDir', (path) => callbacks.onFileChange(rootPath, 'addDir', path))
+    .on('unlinkDir', (path) => callbacks.onFileChange(rootPath, 'unlinkDir', path))
     .on('error', (error) => console.error('Watcher error:', error))
 
   return watcher

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MoreHorizontal, Trash2, Pencil, FolderInput, FileText, Folder, Plus } from 'lucide-react'
+import { MoreHorizontal, Trash2, Pencil, FolderInput, FileText, Folder, Plus, Copy } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet'
 import { Button } from './ui/button'
@@ -26,11 +26,12 @@ interface FileItemMenuProps {
   currentDir: string
   onRenameRequest: (item: FileItem) => void
   onMoveRequest: (item: FileItem) => void
+  onCopyRequest?: (item: FileItem) => void
   onDelete: (path: string) => void
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
 }
 
-export function FileItemMenu({ item, currentDir, onRenameRequest, onMoveRequest, onDelete, onCreateRequest }: FileItemMenuProps) {
+export function FileItemMenu({ item, currentDir, onRenameRequest, onMoveRequest, onCopyRequest, onDelete, onCreateRequest }: FileItemMenuProps) {
   const [open, setOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -133,6 +134,17 @@ export function FileItemMenu({ item, currentDir, onRenameRequest, onMoveRequest,
             >
               <FolderInput className="size-4" />
               移动到
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 text-sm"
+              onClick={() => {
+                onCopyRequest?.(item)
+                handleClose()
+              }}
+            >
+              <Copy className="size-4" />
+              复制到
             </Button>
             <Button
               variant="ghost"

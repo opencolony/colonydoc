@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, Search, X, Settings, GripVertical } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, Search, X, Settings, GripVertical, AlertCircle } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { useSearch } from './hooks/useSearch'
@@ -9,6 +9,7 @@ import { CreateFileModal } from './components/CreateFileModal'
 import { SearchDialog } from './components/SearchDialog'
 import { RenameDialog } from './components/RenameDialog'
 import { MoveFileModal } from './components/MoveFileModal'
+import { CopyFileModal } from './components/CopyFileModal'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
@@ -31,9 +32,16 @@ interface FileNode {
   children?: FileNode[]
 }
 
-interface SidebarContentProps {
+interface FileGroup {
+  root: { path: string; exclude?: string[] }
   files: FileNode[]
+  error?: string
+}
+
+interface SidebarContentProps {
+  groups: FileGroup[]
   activePath: string | null
+  activeRoot: string | null
   currentDir: string
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
@@ -41,6 +49,7 @@ interface SidebarContentProps {
   onDelete: (path: string) => void
   onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
@@ -48,11 +57,13 @@ interface SidebarContentProps {
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
   onSettingsOpen?: () => void
   onClose?: () => void
+  onRootChange?: (rootPath: string) => void
 }
 
 const SidebarContent = memo(function SidebarContent({
-  files,
+  groups,
   activePath,
+  activeRoot,
   currentDir,
   expandedPaths,
   setExpandedPaths,
@@ -60,6 +71,7 @@ const SidebarContent = memo(function SidebarContent({
   onDelete,
   onRenameRequest,
   onMoveRequest,
+  onCopyRequest,
   onExpand,
   editingType,
   onEditingChange,
@@ -67,7 +79,12 @@ const SidebarContent = memo(function SidebarContent({
   onCreateRequest,
   onSettingsOpen,
   onClose,
+  onRootChange,
 }: SidebarContentProps) {
+  // 获取当前活动组的文件列表
+  const activeGroup = groups.find(g => g.root.path === activeRoot)
+  const files = activeGroup?.files || []
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
@@ -86,9 +103,39 @@ const SidebarContent = memo(function SidebarContent({
           </Button>
         </div>
       </div>
+      {/* 多根目录切换 */}
+      {groups.length > 1 && (
+        <div className="flex gap-1 px-4 py-2 border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
+          {groups.map(group => (
+            <Button
+              key={group.root.path}
+              variant={activeRoot === group.root.path ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => onRootChange?.(group.root.path)}
+              className={cn(
+                "whitespace-nowrap relative group",
+                group.error && "border-destructive text-destructive hover:text-destructive"
+              )}
+              title={group.error || group.root.path}
+            >
+              {group.error && (
+                <AlertCircle className="size-3 mr-1 text-destructive shrink-0" />
+              )}
+              <span className="truncate max-w-[100px] md:max-w-[150px] min-w-0 flex-shrink-0">
+                {group.root.path.split('/').pop() || group.root.path}
+              </span>
+              {/* Desktop tooltip */}
+              <span className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                {group.error ? `${group.root.path} (${group.error})` : group.root.path}
+              </span>
+            </Button>
+          ))}
+        </div>
+      )}
       <FileTree
         files={files}
         activePath={activePath}
+        activeRoot={activeRoot}
         currentDir={currentDir}
         expandedPaths={expandedPaths}
         setExpandedPaths={setExpandedPaths}
@@ -96,6 +143,7 @@ const SidebarContent = memo(function SidebarContent({
         onDelete={onDelete}
         onRenameRequest={onRenameRequest}
         onMoveRequest={onMoveRequest}
+        onCopyRequest={onCopyRequest}
         onExpand={onExpand}
         editingType={editingType}
         onEditingChange={onEditingChange}
@@ -107,14 +155,17 @@ const SidebarContent = memo(function SidebarContent({
 })
 
 function App() {
-  const [files, setFiles] = useState<FileNode[]>([])
+  const [fileGroups, setFileGroups] = useState<FileGroup[]>([])
+  const [activeRoot, setActiveRoot] = useState<string | null>(null)
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [moveModalOpen, setMoveModalOpen] = useState(false)
+  const [copyModalOpen, setCopyModalOpen] = useState(false)
   const [renameItem, setRenameItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
   const [moveItem, setMoveItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
+  const [copyItem, setCopyItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
@@ -233,15 +284,19 @@ function App() {
     if (fetchingRef.current) return
     fetchingRef.current = true
     try {
-      const res = await fetch('/api/files')
+      const res = await fetch('/api/files/')
       const data = await res.json()
-      setFiles(data.files || [])
+      setFileGroups(data.groups || [])
+      // 设置默认活动根目录
+      if (!activeRoot && data.groups?.length > 0) {
+        setActiveRoot(data.groups[0].root.path)
+      }
     } catch (e) {
       console.error('Failed to fetch files:', e)
     } finally {
       fetchingRef.current = false
     }
-  }, [])
+  }, [activeRoot])
 
   useEffect(() => {
     fetchFiles()
@@ -258,7 +313,13 @@ function App() {
   useWebSocket(useCallback((data) => {
     if (data.type === 'file:change') {
       const changedPath = data.path
+      const rootPath = data.rootPath
       if (!changedPath) return
+
+      // 检查变更是否属于当前活动根目录
+      if (rootPath && activeRoot && rootPath !== activeRoot) {
+        return
+      }
 
       // 检查是否是用户自己保存的文件
       // 双重验证机制：1. 检查会话ID集合  2. 检查最近保存时间戳
@@ -298,7 +359,7 @@ function App() {
 
       fetchFiles()
     }
-  }, [fetchFiles, path, updateIndex, removeFromIndex]))
+  }, [fetchFiles, path, updateIndex, removeFromIndex, activeRoot]))
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory') => {
     if (type === 'file') {
@@ -475,6 +536,22 @@ function App() {
     }
   }, [path, load, fetchFiles])
 
+  const handleCopy = useCallback(async (sourcePath: string, targetPath: string) => {
+    try {
+      await fetch('/api/files/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourcePath,
+          targetPath,
+        }),
+      })
+      fetchFiles()
+    } catch (e) {
+      console.error('Failed to copy:', e)
+    }
+  }, [fetchFiles])
+
   const handleCreateFile = useCallback(async (name: string, isDirectory: boolean, parentPath: string) => {
     try {
       const fileName = isDirectory ? name : `${name}.md`
@@ -539,6 +616,8 @@ function App() {
 
   const fileName = path ? path.split('/').pop() : null
 
+  const allFiles = fileGroups.flatMap(g => g.files)
+
   useEffect(() => {
     document.title = fileName ? `${fileName} - ColonyNote` : 'ColonyNote'
   }, [fileName])
@@ -547,16 +626,16 @@ function App() {
     <div className="flex flex-col h-full">
       {isMobile && (
         <header className="flex items-center px-4 py-3 border-b border-border bg-background md:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setDrawerVisible(true)}>
+          <Button variant="ghost" size="icon" onClick={() => setDrawerVisible(true)} className="size-11 min-h-11 min-w-11">
             <List className="size-5" />
           </Button>
           <div className="flex-1 text-base font-semibold text-center truncate mx-4">
             {fileName || 'ColonyNote'}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setSearchDialogOpen(true)}>
+          <Button variant="ghost" size="icon" onClick={() => setSearchDialogOpen(true)} className="size-11 min-h-11 min-w-11">
             <Search className="size-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'}>
+          <Button variant="ghost" size="icon" onClick={handleToggleEditorMode} title={editorMode === 'wysiwyg' ? '源码模式' : '所见即所得'} className="size-11 min-h-11 min-w-11">
             {editorMode === 'wysiwyg' ? <Code className="size-5" /> : <Eye className="size-5" />}
           </Button>
         </header>
@@ -575,8 +654,9 @@ function App() {
               )}
             >
               <SidebarContent
-                files={files}
+                groups={fileGroups}
                 activePath={path}
+                activeRoot={activeRoot}
                 currentDir={currentDir}
                 expandedPaths={expandedPaths}
                 setExpandedPaths={setExpandedPaths}
@@ -590,6 +670,10 @@ function App() {
                   setMoveItem(item)
                   setMoveModalOpen(true)
                 }}
+                onCopyRequest={(item) => {
+                  setCopyItem(item)
+                  setCopyModalOpen(true)
+                }}
                 onExpand={handleExpand}
                 editingType={editingType}
                 onEditingChange={handleEditingChange}
@@ -597,6 +681,7 @@ function App() {
                 onCreateRequest={handleCreateRequest}
                 onSettingsOpen={() => setSettingsDialogOpen(true)}
                 onClose={() => setDrawerVisible(false)}
+                onRootChange={setActiveRoot}
               />
             </aside>
           </>
@@ -606,8 +691,9 @@ function App() {
           <div className="hidden md:flex shrink-0">
             <aside style={{ width: sidebarWidth }} className="flex flex-col border-r border-border bg-sidebar">
               <SidebarContent
-              files={files}
+              groups={fileGroups}
               activePath={path}
+              activeRoot={activeRoot}
               currentDir={currentDir}
               expandedPaths={expandedPaths}
               setExpandedPaths={setExpandedPaths}
@@ -621,12 +707,17 @@ function App() {
                 setMoveItem(item)
                 setMoveModalOpen(true)
               }}
+              onCopyRequest={(item) => {
+                setCopyItem(item)
+                setCopyModalOpen(true)
+              }}
               onExpand={handleExpand}
               editingType={editingType}
               onEditingChange={handleEditingChange}
               onCreateSubmit={handleCreateSubmit}
               onCreateRequest={handleCreateRequest}
               onSettingsOpen={() => setSettingsDialogOpen(true)}
+              onRootChange={setActiveRoot}
             />
             </aside>
             <div
@@ -711,7 +802,7 @@ function App() {
       <SearchDialog
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
-        files={files}
+        files={allFiles}
         onSelect={(path) => handleSelectFile(path, 'file')}
       />
 
@@ -730,11 +821,23 @@ function App() {
         open={moveModalOpen}
         onOpenChange={setMoveModalOpen}
         item={moveItem}
-        files={files}
+        files={allFiles}
         onMove={(oldPath, newParentPath) => {
           setMoveItem(null)
           setMoveModalOpen(false)
           handleMove(oldPath, newParentPath)
+        }}
+      />
+
+      <CopyFileModal
+        open={copyModalOpen}
+        onOpenChange={setCopyModalOpen}
+        item={copyItem}
+        groups={fileGroups}
+        onCopy={(sourcePath, targetPath) => {
+          setCopyItem(null)
+          setCopyModalOpen(false)
+          handleCopy(sourcePath, targetPath)
         }}
       />
 

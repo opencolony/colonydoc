@@ -9,6 +9,7 @@ interface WSMessage {
   type: string
   event?: string
   path?: string
+  rootPath?: string
 }
 
 type WSStatus = 'connecting' | 'connected' | 'disconnected'

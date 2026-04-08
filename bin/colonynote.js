@@ -4,94 +4,50 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { createFileRouter } from '../dist/server/api.js'
-import { loadConfig } from '../dist/config.js'
+import { loadConfig, DEFAULT_PORT, DEFAULT_HOST } from '../dist/config.js'
 import { setupWatcher } from '../dist/server/watcher.js'
 import { IgnoreMatcher } from '../dist/server/ignore.js'
 import { WebSocketServer, WebSocket } from 'ws'
 import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join, extname } from 'path'
+import { Command } from 'commander'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const pkg = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'))
 
-const argv = process.argv.slice(2)
-const args = {}
-const validOptions = new Set(['root', 'r', 'port', 'p', 'host', 'config', 'c', 'help', 'h', 'version'])
+const program = new Command()
 
-for (let i = 0; i < argv.length; i++) {
-  const arg = argv[i]
-  if (arg.startsWith('--')) {
-    const key = arg.slice(2)
-    const next = argv[i + 1]
-    if (next && !next.startsWith('-')) {
-      args[key] = next
-      i++
-    } else {
-      args[key] = true
-    }
-  } else if (arg.startsWith('-')) {
-    const key = arg.slice(1)
-    const next = argv[i + 1]
-    if (next && !next.startsWith('-')) {
-      args[key] = next
-      i++
-    } else {
-      args[key] = true
-    }
-  } else {
-    console.error(`Unknown argument: ${arg}`)
-    console.error(`Run 'colonynote --help' for usage.`)
-    process.exit(1)
-  }
-}
+program
+  .name('colonynote')
+  .description('Markdown online editor')
+  .version(pkg.version)
+  .option('-r, --root <path>', 'Root directory (can be specified multiple times)', collect, [])
+  .option('-p, --port <number>', 'Server port', DEFAULT_PORT.toString())
+  .option('--host <host>', 'Server host', DEFAULT_HOST)
+  .parse()
 
-for (const key of Object.keys(args)) {
-  if (!validOptions.has(key)) {
-    console.error(`Unknown option: --${key}`)
-    console.error(`Run 'colonynote --help' for usage.`)
-    process.exit(1)
-  }
-}
+const options = program.opts()
 
-if (args.h || args.help) {
-  console.log(`
-colonynote - Markdown online editor
-
-Usage:
-  colonynote [options]
-
-Options:
-  -r, --root <path>      Root directory (default: current directory)
-  -p, --port <number>    Server port (default: 5787)
-  --host <host>          Server host (default: 0.0.0.0)
-  -c, --config <path>    Config file path
-  -h, --help             Show this help
-  --version              Show version
-`)
-  process.exit(0)
-}
-
-if (args.version) {
-  console.log(`colonynote v${pkg.version}`)
-  process.exit(0)
+function collect(value, previous) {
+  return previous.concat([value])
 }
 
 async function main() {
-  const config = await loadConfig(args.config)
+  const config = await loadConfig()
 
-  if (args.r || args.root) {
-    config.root = args.r || args.root
-  }
-  if (args.p || args.port) {
-    config.port = parseInt(args.p || args.port, 10)
-  }
-  if (args.host) {
-    config.host = args.host
+  // CLI --root adds to config.roots (temporary, not saved)
+  if (options.root && options.root.length > 0) {
+    for (const rootPath of options.root) {
+      config.roots.push({ path: rootPath })
+    }
   }
 
-  const matcher = new IgnoreMatcher(config.root, {
+  const port = parseInt(options.port, 10)
+  const host = options.host
+
+  const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
@@ -148,8 +104,8 @@ async function main() {
 
   const server = serve({
     fetch: app.fetch,
-    port: config.port,
-    hostname: config.host,
+    port,
+    hostname: host,
   })
 
   const clients = new Set()
@@ -169,9 +125,9 @@ async function main() {
   })
 
   setupWatcher(config, matcher, {
-    onFileChange: (event, path) => {
-      const relativePath = path.replace(config.root, '')
-      const message = JSON.stringify({ type: 'file:change', event, path: relativePath })
+    onFileChange: (rootPath, event, filePath) => {
+      const relativePath = filePath.replace(rootPath, '')
+      const message = JSON.stringify({ type: 'file:change', event, path: relativePath, rootPath })
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message)
@@ -181,9 +137,9 @@ async function main() {
   })
 
   console.log(`\n  ColonyNote is running!\n`)
-  console.log(`  Local:   http://localhost:${config.port}`)
-  console.log(`  Network: http://${config.host}:${config.port}`)
-  console.log(`  Root:    ${config.root}\n`)
+  console.log(`  Local:   http://localhost:${port}`)
+  console.log(`  Network: http://${host}:${port}`)
+  console.log(`  Roots:   ${config.roots.map(r => r.path).join(', ')}\n`)
 }
 
 main().catch((e) => {

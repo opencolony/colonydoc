@@ -12,7 +12,7 @@ export function createApp(config: ColonynoteConfig) {
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
   }
-  const matcher = new IgnoreMatcher(config.root, ignoreConfig)
+  const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), ignoreConfig)
 
   app.use('*', cors())
 
