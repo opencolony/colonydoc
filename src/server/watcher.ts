@@ -31,26 +31,38 @@ export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, c
     depth: 3,
   })
 
-  const rootPath = config.roots[0]?.path || ''
-
   watcher
     .on('add', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
+        const matchingRoot = config.roots.find(r => path.startsWith(r.path))
+        const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
         callbacks.onFileChange(rootPath, 'add', path)
       }
     })
     .on('change', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
+        const matchingRoot = config.roots.find(r => path.startsWith(r.path))
+        const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
         callbacks.onFileChange(rootPath, 'change', path)
       }
     })
     .on('unlink', (path) => {
       if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
+        const matchingRoot = config.roots.find(r => path.startsWith(r.path))
+        const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
         callbacks.onFileChange(rootPath, 'unlink', path)
       }
     })
-    .on('addDir', (path) => callbacks.onFileChange(rootPath, 'addDir', path))
-    .on('unlinkDir', (path) => callbacks.onFileChange(rootPath, 'unlinkDir', path))
+    .on('addDir', (path) => {
+      const matchingRoot = config.roots.find(r => path.startsWith(r.path))
+      const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
+      callbacks.onFileChange(rootPath, 'addDir', path)
+    })
+    .on('unlinkDir', (path) => {
+      const matchingRoot = config.roots.find(r => path.startsWith(r.path))
+      const rootPath = matchingRoot?.path || config.roots[0]?.path || ''
+      callbacks.onFileChange(rootPath, 'unlinkDir', path)
+    })
     .on('error', (error) => console.error('Watcher error:', error))
 
   return watcher
