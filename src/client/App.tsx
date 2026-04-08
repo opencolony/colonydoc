@@ -45,7 +45,7 @@ interface SidebarContentProps {
   currentDir: string
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
-  onSelect: (path: string, type: 'file' | 'directory') => void
+  onSelect: (path: string, type: 'file' | 'directory', rootPath?: string) => void
   onDelete: (path: string) => void
   onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
@@ -361,7 +361,7 @@ function App() {
     }
   }, [fetchFiles, path, updateIndex, removeFromIndex, activeRoot]))
 
-  const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory') => {
+  const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory', rootPath?: string) => {
     if (type === 'file') {
       const parts = selectedPath.split('/').filter(Boolean)
       const dirs: string[] = []
@@ -376,15 +376,16 @@ function App() {
         })
       }
 
-      load(selectedPath)
-      window.location.hash = selectedPath
+      const effectiveRoot = rootPath || activeRoot
+      load(selectedPath, effectiveRoot || undefined)
+      window.location.hash = effectiveRoot ? `${effectiveRoot}:${selectedPath}` : selectedPath
       const dir = selectedPath.substring(0, selectedPath.lastIndexOf('/'))
       setCurrentDir(dir)
       setDrawerVisible(false)
     } else {
       setCurrentDir(selectedPath)
     }
-  }, [load])
+  }, [load, activeRoot])
 
   const handleExpand = useCallback((path: string) => {
     setCurrentDir(path)
@@ -446,9 +447,32 @@ function App() {
       const hash = decodeURIComponent(window.location.hash.slice(1))
       if (hash && loadingRef.current !== hash) {
         loadingRef.current = hash
-        load(hash)
-        const dir = hash.substring(0, hash.lastIndexOf('/'))
+        const colonIndex = hash.indexOf(':')
+        let rootPath: string | undefined
+        let filePath: string
+        if (colonIndex > 0) {
+          rootPath = hash.substring(0, colonIndex)
+          filePath = hash.substring(colonIndex + 1)
+        } else {
+          filePath = hash
+        }
+        load(filePath, rootPath)
+        if (rootPath) {
+          setActiveRoot(rootPath)
+        }
+        const dir = filePath.substring(0, filePath.lastIndexOf('/'))
         setCurrentDir(dir)
+        const parentDirs: string[] = []
+        let currentPath = filePath
+        while (currentPath.includes('/')) {
+          currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'))
+          if (currentPath) parentDirs.push(currentPath)
+        }
+        setExpandedPaths(prev => {
+          const newSet = new Set(prev)
+          parentDirs.forEach(d => newSet.add(d))
+          return newSet
+        })
       }
     }
 

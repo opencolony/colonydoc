@@ -18,9 +18,12 @@ export function useFile(options: UseFileOptions = {}) {
   const optionsRef = useRef(options)
   optionsRef.current = options
 
-  const load = useCallback(async (filePath: string) => {
+  const load = useCallback(async (filePath: string, rootPath?: string) => {
     try {
-      const res = await fetch(`/api/files${filePath}`)
+      const url = rootPath 
+        ? `/api/files${filePath}?root=${encodeURIComponent(rootPath)}`
+        : `/api/files${filePath}`
+      const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load file')
       const text = await res.text()
       setContent(text)

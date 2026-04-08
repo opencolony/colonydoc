@@ -39,7 +39,7 @@ interface FileTreeProps {
   currentDir: string
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
-  onSelect: (path: string, type: 'file' | 'directory') => void
+  onSelect: (path: string, type: 'file' | 'directory', rootPath?: string) => void
   onDelete: (path: string) => void
   onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
@@ -51,12 +51,12 @@ interface FileTreeProps {
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
 }
 
-function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir }: {
+function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir, activeRoot }: {
   node: FileNode
   activePath: string | null
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<SetStateAction<Set<string>>>
-  onSelect: (path: string, type: 'file' | 'directory') => void
+  onSelect: (path: string, type: 'file' | 'directory', rootPath?: string) => void
   onDelete: (path: string) => void
   onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
   onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
@@ -67,6 +67,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
   currentDir: string
+  activeRoot: string | null
 }) {
   const [editName, setEditName] = useState('')
   const [menuItem, setMenuItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; childrenCount?: number } | null>(null)
@@ -107,7 +108,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
         <SidebarMenuButton
           isActive={isActive}
           className="data-[active=true]:bg-sidebar-accent pr-8"
-          onClick={() => onSelect(node.path, 'file')}
+          onClick={() => onSelect(node.path, 'file', activeRoot || undefined)}
         >
           <File className="size-4 shrink-0" />
           <span className="flex-1 whitespace-nowrap">{node.name}</span>
@@ -206,6 +207,7 @@ function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect,
                 onCreateSubmit={onCreateSubmit}
                 onCreateRequest={onCreateRequest}
                 currentDir={currentDir}
+                activeRoot={activeRoot}
               />
             ))}
             {editingType && node.path === currentDir && (
@@ -356,6 +358,7 @@ export const FileTree = memo(function FileTree({ files, activePath, activeRoot, 
                   onCreateSubmit={onCreateSubmit}
                   onCreateRequest={onCreateRequest}
                   currentDir={currentDir}
+                  activeRoot={activeRoot}
                 />
               ))}
               {editingType && (currentDir === '' || currentDir === '/') && (

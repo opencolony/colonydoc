@@ -292,8 +292,19 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     const results: { path: string; name: string; content: string }[] = []
 
     for (const filePath of paths) {
-      const rootPath = findRootForPath(filePath, config)
-      if (!rootPath) continue
+    const rootParam = c.req.query('root')
+    let rootPath: string | null
+
+    if (rootParam) {
+      rootPath = path.resolve(rootParam)
+      if (!config.roots.some(r => path.resolve(r.path) === rootPath)) {
+        return c.json({ error: 'Invalid root' }, 400)
+      }
+    } else {
+      rootPath = findRootForPath(filePath, config)
+    }
+
+    if (!rootPath) return c.json({ error: 'Access denied' }, 403)
       const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
       const fullPath = path.join(rootPath, relativePath)
 
