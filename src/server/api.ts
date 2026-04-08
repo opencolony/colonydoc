@@ -52,8 +52,8 @@ function checkNestedPath(newPath: string, existingRoots: RootConfig[]): {
 function findRootForPath(filePath: string, config: ColonynoteConfig): string | null {
   for (const root of config.roots) {
     const rootPath = path.resolve(root.path)
-    const fullPath = path.join(rootPath, filePath)
-    // Check if fullPath is within this root
+    const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+    const fullPath = path.join(rootPath, relativePath)
     if (fullPath.startsWith(rootPath + path.sep) || fullPath === rootPath) {
       return rootPath
     }
@@ -293,7 +293,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     for (const filePath of paths) {
       const rootPath = findRootForPath(filePath, config)
       if (!rootPath) continue
-      const fullPath = path.join(rootPath, filePath)
+      const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+      const fullPath = path.join(rootPath, relativePath)
 
       if (!isAllowed(fullPath, config)) {
         continue
@@ -347,7 +348,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
     const rootPath = findRootForPath(filePath, config)
     if (!rootPath) return c.json({ error: 'Access denied' }, 403)
-    const fullPath = path.join(rootPath, filePath)
+    const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+    const fullPath = path.join(rootPath, relativePath)
 
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
@@ -375,7 +377,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
     const rootPath = findRootForPath(filePath, config)
     if (!rootPath) return c.json({ error: 'Access denied' }, 403)
-    const fullPath = path.join(rootPath, filePath)
+    const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+    const fullPath = path.join(rootPath, relativePath)
 
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
@@ -427,7 +430,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
     const rootPath = findRootForPath(filePath, config)
     if (!rootPath) return c.json({ error: 'Access denied' }, 403)
-    const fullPath = path.join(rootPath, filePath)
+    const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+    const fullPath = path.join(rootPath, relativePath)
 
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
@@ -516,7 +520,8 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     const filePath = c.req.path.replace(/^\/api\/files/, '') || '/'
     const rootPath = findRootForPath(filePath, config)
     if (!rootPath) return c.json({ error: 'Access denied' }, 403)
-    const fullPath = path.join(rootPath, filePath)
+    const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+    const fullPath = path.join(rootPath, relativePath)
 
     if (!isAllowed(fullPath, config)) {
       return c.json({ error: 'Access denied' }, 403)
