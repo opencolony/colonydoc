@@ -27,6 +27,12 @@ function isAllowed(pathStr: string, config: ColonynoteConfig): boolean {
   return config.roots.some(root => resolved.startsWith(path.resolve(root.path)))
 }
 
+function validateRoot(rootPath: string, config: ColonynoteConfig): string | null {
+  const resolved = path.resolve(rootPath)
+  const root = config.roots.find(r => path.resolve(r.path) === resolved)
+  return root ? path.resolve(root.path) : null
+}
+
 function checkSensitivePath(inputPath: string): boolean {
   const basename = path.basename(inputPath)
   for (const pattern of DEFAULT_SENSITIVE_PATHS) {
