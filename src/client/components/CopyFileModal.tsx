@@ -128,7 +128,8 @@ export function CopyFileModal({
     if (item && open) {
       const parentPath = item.path.substring(0, item.path.lastIndexOf('/'))
       setSelectedPath(parentPath || '/')
-      const itemRoot = groups.find(g => item.path.startsWith(g.root.path))
+      // item.path is a relative path (e.g., "/readme.md"), find which group contains this file
+      const itemRoot = groups.find(g => g.files.some(f => f.path === item.path))
       setSelectedRoot(itemRoot?.root.path || groups[0]?.root.path || null)
     }
   }, [item, open, groups])

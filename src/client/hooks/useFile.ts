@@ -14,11 +14,14 @@ export function useFile(options: UseFileOptions = {}) {
   const lastSavedContentRef = useRef<string>('')
   // 用于区分自己保存和外部修改的会话标识
   const saveSessionRef = useRef<string | null>(null)
+  // 用于保存当前 rootPath，确保 updateContent 时能访问到正确的值
+  const rootPathRef = useRef<string | undefined>(undefined)
 
   const optionsRef = useRef(options)
   optionsRef.current = options
 
   const load = useCallback(async (filePath: string, rootPath?: string) => {
+    rootPathRef.current = rootPath
     try {
       const url = rootPath 
         ? `/api/files${filePath}?root=${encodeURIComponent(rootPath)}`
@@ -38,6 +41,8 @@ export function useFile(options: UseFileOptions = {}) {
   const save = useCallback(async (newContent: string, filePath: string | null = path, rootPath?: string) => {
     if (!filePath) return
 
+    const effectiveRootPath = rootPath ?? rootPathRef.current
+
     // 生成保存会话标识，用于区分自己保存和外部修改
     const sessionId = `${filePath}:${Date.now()}`
     saveSessionRef.current = sessionId
@@ -45,8 +50,8 @@ export function useFile(options: UseFileOptions = {}) {
     setStatus('saving')
     optionsRef.current.onSaveStart?.(filePath, sessionId)
     try {
-      const url = rootPath
-        ? `/api/files${filePath}?root=${encodeURIComponent(rootPath)}`
+      const url = effectiveRootPath
+        ? `/api/files${filePath}?root=${encodeURIComponent(effectiveRootPath)}`
         : `/api/files${filePath}`
       const res = await fetch(url, {
         method: 'POST',
