@@ -287,9 +287,17 @@ function App() {
       const res = await fetch('/api/files/')
       const data = await res.json()
       setFileGroups(data.groups || [])
-      // 设置默认活动根目录
       if (!activeRoot && data.groups?.length > 0) {
-        setActiveRoot(data.groups[0].root.path)
+        const hash = decodeURIComponent(window.location.hash.slice(1))
+        const colonIndex = hash.indexOf(':')
+        const rootFromHash = colonIndex > 0 ? hash.substring(0, colonIndex) : null
+        
+        if (rootFromHash) {
+          const rootExists = data.groups.some((g: { root: { path: string } }) => g.root.path === rootFromHash)
+          setActiveRoot(rootExists ? rootFromHash : data.groups[0].root.path)
+        } else {
+          setActiveRoot(data.groups[0].root.path)
+        }
       }
     } catch (e) {
       console.error('Failed to fetch files:', e)
