@@ -122,6 +122,7 @@ export function MoveFileModal({
 }: MoveFileModalProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>('')
   const [selectedRoot, setSelectedRoot] = useState<string | null>(null)
+  const [sourceRoot, setSourceRoot] = useState<string | null>(null)
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -129,8 +130,10 @@ export function MoveFileModal({
       const parentPath = item.path.substring(0, item.path.lastIndexOf('/'))
       setSelectedPath(parentPath || '/')
       // item.path is a relative path (e.g., "/readme.md"), find which group contains this file
-      const itemRoot = groups.find(g => g.files.some(f => f.path === item.path))
-      setSelectedRoot(itemRoot?.root.path || groups[0]?.root.path || null)
+      const itemGroup = groups.find(g => g.files.some(f => f.path === item.path))
+      const itemRootPath = itemGroup?.root.path || groups[0]?.root.path || null
+      setSelectedRoot(itemRootPath)
+      setSourceRoot(itemRootPath)
     }
   }, [item, open, groups])
 
@@ -147,13 +150,12 @@ export function MoveFileModal({
   }
 
   const handleMove = () => {
-    if (item && selectedPath !== null && selectedRoot !== null) {
+    if (item && selectedPath !== null && selectedRoot !== null && sourceRoot !== null) {
       const fileName = item.path.split('/').pop() || ''
-      const targetPath = selectedPath === '/' 
-        ? `${selectedRoot}/${fileName}` 
+      const targetPath = selectedPath === '/'
+        ? `/${fileName}`
         : `${selectedPath}/${fileName}`
-      const sourceRoot = groups.find(g => item.path.startsWith(g.root.path))?.root.path || ''
-      if (targetPath !== item.path) {
+      if (targetPath !== item.path || sourceRoot !== selectedRoot) {
         onMove(item.path, targetPath, sourceRoot, selectedRoot)
       }
       onOpenChange(false)
