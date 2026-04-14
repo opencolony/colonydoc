@@ -10,7 +10,7 @@ import { IgnoreMatcher } from '../dist/server/ignore.js'
 import { WebSocketServer, WebSocket } from 'ws'
 import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
-import { dirname, join, extname } from 'path'
+import { dirname, join, extname, resolve } from 'path'
 import { Command } from 'commander'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -39,6 +39,12 @@ async function main() {
 
   if (options.root && options.root.length > 0) {
     for (const rootPath of options.root) {
+      const resolvedPath = resolve(rootPath)
+      const exists = config.roots.some((r) => resolve(r.path) === resolvedPath)
+      if (exists) {
+        console.warn(`Skipping duplicate root: ${rootPath}`)
+        continue
+      }
       config.roots.unshift({ path: rootPath, isCli: true })
     }
   }

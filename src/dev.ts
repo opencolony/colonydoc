@@ -30,6 +30,12 @@ async function main() {
 
   if (cliRoots.length > 0) {
     for (const rootPath of cliRoots) {
+      const resolvedPath = path.resolve(rootPath)
+      const exists = config.roots.some((r) => path.resolve(r.path) === resolvedPath)
+      if (exists) {
+        console.warn(`Skipping duplicate root: ${rootPath}`)
+        continue
+      }
       config.roots.unshift({ path: rootPath, isCli: true } as RootConfig)
     }
   }
