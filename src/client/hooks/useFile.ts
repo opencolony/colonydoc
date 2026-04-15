@@ -14,17 +14,17 @@ export function useFile(options: UseFileOptions = {}) {
   const lastSavedContentRef = useRef<string>('')
   // 用于区分自己保存和外部修改的会话标识
   const saveSessionRef = useRef<string | null>(null)
-  // 用于保存当前 rootPath，确保 updateContent 时能访问到正确的值
-  const rootPathRef = useRef<string | undefined>(undefined)
+  // 用于保存当前 dirPath，确保 updateContent 时能访问到正确的值
+  const dirPathRef = useRef<string | undefined>(undefined)
 
   const optionsRef = useRef(options)
   optionsRef.current = options
 
-  const load = useCallback(async (filePath: string, rootPath?: string) => {
-    rootPathRef.current = rootPath
+  const load = useCallback(async (filePath: string, dirPath?: string) => {
+    dirPathRef.current = dirPath
     try {
-      const url = rootPath 
-        ? `/api/files${filePath}?root=${encodeURIComponent(rootPath)}`
+      const url = dirPath 
+        ? `/api/files${filePath}?root=${encodeURIComponent(dirPath)}`
         : `/api/files${filePath}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load file')
@@ -38,10 +38,10 @@ export function useFile(options: UseFileOptions = {}) {
     }
   }, [])
 
-  const save = useCallback(async (newContent: string, filePath: string | null = path, rootPath?: string) => {
+  const save = useCallback(async (newContent: string, filePath: string | null = path, dirPath?: string) => {
     if (!filePath) return
 
-    const effectiveRootPath = rootPath ?? rootPathRef.current
+    const effectiveDirPath = dirPath ?? dirPathRef.current
 
     // 生成保存会话标识，用于区分自己保存和外部修改
     const sessionId = `${filePath}:${Date.now()}`
@@ -50,8 +50,8 @@ export function useFile(options: UseFileOptions = {}) {
     setStatus('saving')
     optionsRef.current.onSaveStart?.(filePath, sessionId)
     try {
-      const url = effectiveRootPath
-        ? `/api/files${filePath}?root=${encodeURIComponent(effectiveRootPath)}`
+      const url = effectiveDirPath
+        ? `/api/files${filePath}?root=${encodeURIComponent(effectiveDirPath)}`
         : `/api/files${filePath}`
       const res = await fetch(url, {
         method: 'POST',

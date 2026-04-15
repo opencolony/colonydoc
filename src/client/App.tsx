@@ -42,7 +42,7 @@ interface FileGroup {
 interface SidebarContentProps {
   groups: FileGroup[]
   activePath: string | null
-  activeRoot: string | null
+  activeDir: string | null
   currentDir: string
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
@@ -58,13 +58,13 @@ interface SidebarContentProps {
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
   onSettingsOpen?: () => void
   onClose?: () => void
-  onRootChange?: (rootPath: string) => void
+  onDirChange?: (dirPath: string) => void
 }
 
 const SidebarContent = memo(function SidebarContent({
   groups,
   activePath,
-  activeRoot,
+  activeDir,
   currentDir,
   expandedPaths,
   setExpandedPaths,
@@ -80,10 +80,10 @@ const SidebarContent = memo(function SidebarContent({
   onCreateRequest,
   onSettingsOpen,
   onClose,
-  onRootChange,
+  onDirChange,
 }: SidebarContentProps) {
   // 获取当前活动组的文件列表
-  const activeGroup = groups.find(g => g.root.path === activeRoot)
+  const activeGroup = groups.find(g => g.root.path === activeDir)
   const files = activeGroup?.files || []
 
   return (
@@ -104,15 +104,15 @@ const SidebarContent = memo(function SidebarContent({
           </Button>
         </div>
       </div>
-      {/* 多根目录切换 */}
+      {/* 多目录切换 */}
       {groups.length > 1 && (
         <div className="flex gap-1 px-4 py-2 border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
           {groups.map(group => (
             <Button
               key={group.root.path}
-              variant={activeRoot === group.root.path ? 'default' : 'ghost'}
+              variant={activeDir === group.root.path ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => onRootChange?.(group.root.path)}
+              onClick={() => onDirChange?.(group.root.path)}
               className={cn(
                 "whitespace-nowrap relative group",
                 group.error && "border-destructive text-destructive hover:text-destructive"
@@ -136,7 +136,7 @@ const SidebarContent = memo(function SidebarContent({
       <FileTree
         files={files}
         activePath={activePath}
-        activeRoot={activeRoot}
+        activeDir={activeDir}
         currentDir={currentDir}
         expandedPaths={expandedPaths}
         setExpandedPaths={setExpandedPaths}
@@ -157,7 +157,7 @@ const SidebarContent = memo(function SidebarContent({
 
 function App() {
   const [fileGroups, setFileGroups] = useState<FileGroup[]>([])
-  const [activeRoot, setActiveRoot] = useState<string | null>(null)
+  const [activeDir, setActiveDir] = useState<string | null>(null)
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
@@ -174,7 +174,7 @@ function App() {
   const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source'>('wysiwyg')
   const [currentDir, setCurrentDir] = useState('')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
-  const rootExpandedPathsRef = useRef<Map<string, Set<string>>>(new Map())
+  const dirExpandedPathsRef = useRef<Map<string, Set<string>>>(new Map())
   const [editingType, setEditingType] = useState<'file' | 'directory' | null>(null)
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false)
   const [pendingExternalChange, setPendingExternalChange] = useState<string | null>(null)
@@ -289,16 +289,16 @@ function App() {
       const res = await fetch('/api/files/')
       const data = await res.json()
       setFileGroups(data.groups || [])
-      if (!activeRoot && data.groups?.length > 0) {
+      if (!activeDir && data.groups?.length > 0) {
         const hash = decodeURIComponent(window.location.hash.slice(1))
         const colonIndex = hash.indexOf(':')
         const rootFromHash = colonIndex > 0 ? hash.substring(0, colonIndex) : null
         
         if (rootFromHash) {
           const rootExists = data.groups.some((g: { root: { path: string } }) => g.root.path === rootFromHash)
-          setActiveRoot(rootExists ? rootFromHash : data.groups[0].root.path)
+          setActiveDir(rootExists ? rootFromHash : data.groups[0].root.path)
         } else {
-          setActiveRoot(data.groups[0].root.path)
+          setActiveDir(data.groups[0].root.path)
         }
       }
     } catch (e) {
@@ -306,7 +306,7 @@ function App() {
     } finally {
       fetchingRef.current = false
     }
-  }, [activeRoot])
+  }, [activeDir])
 
   useEffect(() => {
     fetchFiles()
@@ -319,17 +319,17 @@ function App() {
         const data = await res.json()
         setFileGroups(data.groups || [])
 
-        // Check if activeRoot still exists
-        const rootStillExists = data.groups?.some((g: { root: { path: string } }) => g.root.path === activeRoot)
-        if (!rootStillExists && activeRoot) {
+        // Check if activeDir still exists
+        const rootStillExists = data.groups?.some((g: { root: { path: string } }) => g.root.path === activeDir)
+        if (!rootStillExists && activeDir) {
           // Clear editor
           setPath(null)
           setContent('')
           window.location.hash = ''
           // Switch to first available root or null
-          setActiveRoot(data.groups?.[0]?.root.path || null)
-        } else if (!activeRoot && data.groups?.length > 0) {
-          setActiveRoot(data.groups[0].root.path)
+          setActiveDir(data.groups?.[0]?.root.path || null)
+        } else if (!activeDir && data.groups?.length > 0) {
+          setActiveDir(data.groups[0].root.path)
         }
       } catch (e) {
         console.error('Failed to fetch files on config change:', e)
@@ -337,7 +337,7 @@ function App() {
     }
     window.addEventListener('config-changed', handleConfigChanged)
     return () => window.removeEventListener('config-changed', handleConfigChanged)
-  }, [activeRoot])
+  }, [activeDir])
 
   useWebSocket(useCallback((data) => {
     if (data.type === 'file:change') {
@@ -346,7 +346,7 @@ function App() {
       if (!changedPath) return
 
       // 检查变更是否属于当前活动根目录
-      if (rootPath && activeRoot && rootPath !== activeRoot) {
+      if (rootPath && activeDir && rootPath !== activeDir) {
         return
       }
 
@@ -388,7 +388,7 @@ function App() {
 
       fetchFiles()
     }
-  }, [fetchFiles, path, updateIndex, removeFromIndex, activeRoot]))
+  }, [fetchFiles, path, updateIndex, removeFromIndex, activeDir]))
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory', rootPath?: string) => {
     if (type === 'file') {
@@ -405,7 +405,7 @@ function App() {
         })
       }
 
-      const effectiveRoot = rootPath || activeRoot
+      const effectiveRoot = rootPath || activeDir
       load(selectedPath, effectiveRoot || undefined)
       window.location.hash = effectiveRoot ? `${effectiveRoot}:${selectedPath}` : selectedPath
       const dir = selectedPath.substring(0, selectedPath.lastIndexOf('/'))
@@ -414,7 +414,7 @@ function App() {
     } else {
       setCurrentDir(selectedPath)
     }
-  }, [load, activeRoot])
+  }, [load, activeDir])
 
   const handleExpand = useCallback((path: string) => {
     setCurrentDir(path)
@@ -447,7 +447,7 @@ function App() {
           parentPath: currentDir, 
           name: fileName, 
           isDirectory,
-          root: activeRoot 
+          root: activeDir 
         }),
       })
       setEditingType(null)
@@ -455,7 +455,7 @@ function App() {
     } catch (e) {
       console.error('Failed to create:', e)
     }
-  }, [activeRoot, currentDir, fetchFiles])
+  }, [activeDir, currentDir, fetchFiles])
 
   const handleCreateRequest = useCallback((isDirectory: boolean, parentPath: string) => {
     setEditingType(isDirectory ? 'directory' : 'file')
@@ -488,7 +488,7 @@ function App() {
         }
         load(filePath, rootPath)
         if (rootPath) {
-          setActiveRoot(rootPath)
+          setActiveDir(rootPath)
         }
         const dir = filePath.substring(0, filePath.lastIndexOf('/'))
         setCurrentDir(dir)
@@ -513,8 +513,8 @@ function App() {
 
   const handleDeleteFile = useCallback(async (filePath: string) => {
     try {
-      const url = activeRoot
-        ? `/api/files${filePath}?root=${encodeURIComponent(activeRoot)}`
+      const url = activeDir
+        ? `/api/files${filePath}?root=${encodeURIComponent(activeDir)}`
         : `/api/files${filePath}`
       await fetch(url, { method: 'DELETE' })
       if (path && (path === filePath || path.startsWith(filePath + '/'))) {
@@ -529,7 +529,7 @@ function App() {
     } catch (e) {
       console.error('Failed to delete:', e)
     }
-  }, [fetchFiles, path, activeRoot])
+  }, [fetchFiles, path, activeDir])
 
   const handleRename = useCallback(async (filePath: string, newName: string) => {
     try {
@@ -547,8 +547,8 @@ function App() {
           oldPath,
           newPath,
           isDirectory,
-          sourceRoot: activeRoot,
-          targetRoot: activeRoot,
+          sourceRoot: activeDir,
+          targetRoot: activeDir,
         }),
       })
 
@@ -626,34 +626,34 @@ function App() {
           parentPath, 
           name: fileName, 
           isDirectory,
-          root: activeRoot 
+          root: activeDir 
         }),
       })
       fetchFiles()
     } catch (e) {
       console.error('Failed to create:', e)
     }
-  }, [activeRoot, fetchFiles])
+  }, [activeDir, fetchFiles])
 
   const handleSave = useCallback(() => {
     if (path && content) {
-      save(content, path, activeRoot ?? undefined)
+      save(content, path, activeDir ?? undefined)
     }
-  }, [save, content, path, activeRoot])
+  }, [save, content, path, activeDir])
 
   const handleToggleEditorMode = useCallback(() => {
     setEditorMode(prev => prev === 'wysiwyg' ? 'source' : 'wysiwyg')
   }, [])
 
-  const handleRootChange = useCallback((newRoot: string) => {
-    if (activeRoot) {
-      rootExpandedPathsRef.current.set(activeRoot, new Set(expandedPaths))
+  const handleDirChange = useCallback((newDir: string) => {
+    if (activeDir) {
+      dirExpandedPathsRef.current.set(activeDir, new Set(expandedPaths))
     }
-    setActiveRoot(newRoot)
-    const savedPaths = rootExpandedPathsRef.current.get(newRoot)
+    setActiveDir(newDir)
+    const savedPaths = dirExpandedPathsRef.current.get(newDir)
     setExpandedPaths(savedPaths ?? new Set())
     setCurrentDir('')
-  }, [activeRoot, expandedPaths])
+  }, [activeDir, expandedPaths])
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -729,7 +729,7 @@ function App() {
               <SidebarContent
                 groups={fileGroups}
                 activePath={path}
-                activeRoot={activeRoot}
+                activeDir={activeDir}
                 currentDir={currentDir}
                 expandedPaths={expandedPaths}
                 setExpandedPaths={setExpandedPaths}
@@ -754,7 +754,7 @@ function App() {
                 onCreateRequest={handleCreateRequest}
                 onSettingsOpen={() => setSettingsDialogOpen(true)}
                 onClose={() => setDrawerVisible(false)}
-                onRootChange={handleRootChange}
+                onDirChange={handleDirChange}
               />
             </aside>
           </>
@@ -766,7 +766,7 @@ function App() {
               <SidebarContent
               groups={fileGroups}
               activePath={path}
-              activeRoot={activeRoot}
+              activeDir={activeDir}
               currentDir={currentDir}
               expandedPaths={expandedPaths}
               setExpandedPaths={setExpandedPaths}
@@ -790,7 +790,7 @@ function App() {
               onCreateSubmit={handleCreateSubmit}
               onCreateRequest={handleCreateRequest}
               onSettingsOpen={() => setSettingsDialogOpen(true)}
-              onRootChange={handleRootChange}
+              onDirChange={handleDirChange}
             />
             </aside>
             <div
