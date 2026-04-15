@@ -169,7 +169,7 @@ export function MoveFileModal({
 
   const displayPath = selectedPath
     ? selectedPath === '/'
-      ? '根目录'
+      ? '目录'
       : selectedPath.split('/').filter(Boolean).join(' / ')
     : ''
 
@@ -189,7 +189,7 @@ export function MoveFileModal({
         
         {groups.length > 1 && (
           <div className="mb-3">
-            <label className="text-xs text-muted-foreground mb-1.5 block">目标根目录</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">目标目录</label>
             <select
               value={selectedRoot || ''}
               onChange={(e) => {
@@ -218,7 +218,7 @@ export function MoveFileModal({
               onClick={() => setSelectedPath('/')}
             >
               <Folder className="size-4 shrink-0 text-muted-foreground" />
-              <span className="text-sm">根目录</span>
+              <span className="text-sm">目录</span>
               {selectedPath === '/' && (
                 <span className="text-xs text-muted-foreground ml-auto">移动到这里</span>
               )}

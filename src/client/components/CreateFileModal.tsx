@@ -41,7 +41,7 @@ export const CreateFileModal = memo(function CreateFileModal({ visible, onClose,
     }
   }
 
-  const displayPath = currentDir ? currentDir.split('/').filter(Boolean).join(' / ') : '根目录'
+  const displayPath = currentDir ? currentDir.split('/').filter(Boolean).join(' / ') : '目录'
 
   return (
     <Sheet open={visible} onOpenChange={handleOpenChange}>
