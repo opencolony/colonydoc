@@ -23,7 +23,8 @@ program
   .name('colonynote')
   .description('Markdown online editor')
   .version(pkg.version)
-  .option('-r, --root <path>', 'Root directory (can be specified multiple times)', collect, [])
+  .option('-d, --dir <path>', 'Root directory (can be specified multiple times)', collect, [])
+  .option('-r, --root <path>', '[DEPRECATED] Use --dir instead', collect, [])
   .option('-p, --port <number>', 'Server port', DEFAULT_PORT.toString())
   .option('--host <host>', 'Server host', DEFAULT_HOST)
   .parse()
@@ -38,21 +39,28 @@ async function main() {
   const config = await loadConfig()
 
   if (options.root && options.root.length > 0) {
-    for (const rootPath of options.root) {
+    console.warn('Warning: --root/-r is deprecated, use --dir/-d instead')
+    if (!options.dir || options.dir.length === 0) {
+      options.dir = options.root
+    }
+  }
+
+  if (options.dir && options.dir.length > 0) {
+    for (const rootPath of options.dir) {
       const resolvedPath = resolve(rootPath)
-      const exists = config.roots.some((r) => resolve(r.path) === resolvedPath)
+      const exists = config.dirs.some((r) => resolve(r.path) === resolvedPath)
       if (exists) {
-        console.warn(`Skipping duplicate root: ${rootPath}`)
+        console.warn(`Skipping duplicate dir: ${rootPath}`)
         continue
       }
-      config.roots.unshift({ path: rootPath, isCli: true })
+      config.dirs.unshift({ path: rootPath, isCli: true })
     }
   }
 
   const port = parseInt(options.port, 10)
   const host = options.host
 
-  const matcher = new IgnoreMatcher(config.roots[0]?.path || process.cwd(), {
+  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
     enableIgnoreFiles: config.ignore.enableIgnoreFiles,
     ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
@@ -144,7 +152,7 @@ async function main() {
   console.log(`\n  ColonyNote is running!\n`)
   console.log(`  Local:   http://localhost:${port}`)
   console.log(`  Network: http://${host}:${port}`)
-  console.log(`  Roots:   ${config.roots.map(r => r.path).join(', ')}\n`)
+  console.log(`  Dirs:    ${config.dirs.map(r => r.path).join(', ')}\n`)
 }
 
 main().catch((e) => {
