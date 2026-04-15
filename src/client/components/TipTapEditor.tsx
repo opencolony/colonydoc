@@ -308,6 +308,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       if (!href) return
 
       if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:') || href.startsWith('#')) {
+        window.open(href, '_blank', 'noopener,noreferrer')
         return
       }
 
