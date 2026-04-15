@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import os from 'os'
-import type { ColonynoteConfig, RootConfig } from '../config.js'
+import type { ColonynoteConfig, DirConfig } from '../config.js'
 import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
 import { minimatch } from 'minimatch'
@@ -41,7 +41,7 @@ function checkSensitivePath(inputPath: string): boolean {
   return false
 }
 
-function checkNestedPath(newPath: string, existingDirs: RootConfig[]): {
+function checkNestedPath(newPath: string, existingDirs: DirConfig[]): {
   isNested: boolean
   conflictWith?: string
   reason?: 'child' | 'parent' | 'duplicate'
@@ -197,7 +197,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       const nested = checkNestedPath(newPath, config.dirs)
       if (nested.isNested) return c.json({ error: 'Nested path not allowed', conflictWith: nested.conflictWith, reason: nested.reason }, 400)
 
-      const newDir: RootConfig = { path: path.resolve(newPath), exclude: body.exclude }
+      const newDir: DirConfig = { path: path.resolve(newPath), exclude: body.exclude }
       config.dirs.push(newDir)
       saveConfig(config)
       return c.json({ success: true, dir: newDir })

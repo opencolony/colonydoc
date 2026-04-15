@@ -21,7 +21,7 @@ import { cn } from "@/client/lib/utils"
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
-interface RootConfig {
+interface DirConfig {
   path: string
   exclude?: string[]
   isCli?: boolean
@@ -44,7 +44,7 @@ interface SettingsState {
 }
 
 interface DirsState {
-  dirs: RootConfig[]
+  dirs: DirConfig[]
   newDirPath: string
   loading: boolean
   error: string | null
@@ -144,7 +144,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           setError('Failed to load settings')
         })
 
-      fetch('/api/files/roots')
+      fetch('/api/files/dirs')
         .then(res => res.json())
         .then(data => {
           setDirsState(prev => ({
@@ -231,7 +231,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
     setDirsState(prev => ({ ...prev, loading: true, error: null }))
     try {
-      const res = await fetch('/api/files/roots', {
+      const res = await fetch('/api/files/dirs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: dirsState.newDirPath }),
@@ -262,7 +262,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const handleRemoveDir = React.useCallback(async (dirPath: string) => {
     setDirsState(prev => ({ ...prev, loading: true, error: null }))
     try {
-      const res = await fetch(`/api/files/roots?path=${encodeURIComponent(dirPath)}`, {
+      const res = await fetch(`/api/files/dirs?path=${encodeURIComponent(dirPath)}`, {
         method: 'DELETE',
       })
 

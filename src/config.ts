@@ -3,16 +3,17 @@ import fs from 'fs'
 import os from 'os'
 import markdownExtensions from 'markdown-extensions'
 
-export interface RootConfig {
+export interface DirConfig {
   path: string
   exclude?: string[]
   isCli?: boolean
 }
 
 export interface ColonynoteConfig {
-  roots: RootConfig[]
+  dirs: DirConfig[]
   allowedExtensions: string[]
   showHiddenFiles: boolean
+  roots: DirConfig[]
   theme: {
     default: 'light' | 'dark' | 'system'
   }
@@ -58,6 +59,7 @@ export const DEFAULT_SENSITIVE_PATHS = [
 ]
 
 const defaultConfig: ColonynoteConfig = {
+  dirs: [{ path: process.cwd() }],
   roots: [{ path: process.cwd() }],
   allowedExtensions: markdownExtensions.map((ext) => `.${ext}`),
   showHiddenFiles: false,
@@ -86,18 +88,22 @@ export async function loadConfig(): Promise<ColonynoteConfig> {
       const content = fs.readFileSync(configPath, 'utf-8')
       const userConfig = JSON.parse(content)
 
-      // Handle legacy 'root' field (singular) -> convert to 'roots' array
-      if (userConfig.root && !userConfig.roots) {
-        userConfig.roots = [{ path: userConfig.root }]
+      if (userConfig.roots && !userConfig.dirs) {
+        userConfig.dirs = userConfig.roots
+        delete userConfig.roots
+      } else if (userConfig.root && !userConfig.roots && !userConfig.dirs) {
+        userConfig.dirs = [{ path: userConfig.root }]
         delete userConfig.root
       }
 
       // Merge user config, filtering out invalid fields
-      const validFields = ['roots', 'showHiddenFiles', 'allowedExtensions', 'theme', 'editor', 'ignore']
+      const validFields = ['dirs', 'roots', 'showHiddenFiles', 'allowedExtensions', 'theme', 'editor', 'ignore']
       for (const field of validFields) {
         if (field in userConfig) {
-          if (field === 'roots' && Array.isArray(userConfig.roots)) {
-            config.roots = userConfig.roots
+          if (field === 'dirs' && Array.isArray(userConfig.dirs)) {
+            config.dirs = userConfig.dirs
+          } else if (field === 'roots' && Array.isArray(userConfig.roots)) {
+            config.dirs = userConfig.roots
           } else if (field === 'showHiddenFiles' && typeof userConfig.showHiddenFiles === 'boolean') {
             config.showHiddenFiles = userConfig.showHiddenFiles
           } else if (field === 'allowedExtensions' && Array.isArray(userConfig.allowedExtensions)) {
@@ -112,7 +118,6 @@ export async function loadConfig(): Promise<ColonynoteConfig> {
         }
       }
 
-      // Auto-fix: save cleaned config
       saveConfig(config)
     } catch (e) {
       console.warn(`Failed to load config from ${configPath}:`, e)
@@ -120,9 +125,9 @@ export async function loadConfig(): Promise<ColonynoteConfig> {
     }
   }
 
-  config.roots = config.roots.map((root) => ({
-    ...root,
-    path: path.resolve(root.path),
+  config.dirs = config.dirs.map((dir) => ({
+    ...dir,
+    path: path.resolve(dir.path),
   }))
 
   return config

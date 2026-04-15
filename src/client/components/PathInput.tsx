@@ -55,7 +55,7 @@ export const PathInput = memo(function PathInput({
 
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/files/roots/search?q=${encodeURIComponent(query)}`)
+      const res = await fetch(`/api/files/dirs/search?q=${encodeURIComponent(query)}`)
       if (!res.ok) throw new Error('Search failed')
       const data = await res.json()
       setResults(data.matches.map((path: string) => ({ path })))

@@ -345,7 +345,7 @@ function App() {
       const rootPath = data.rootPath
       if (!changedPath) return
 
-      // 检查变更是否属于当前活动根目录
+      // 检查变更是否属于当前活动目录
       if (rootPath && activeDir && rootPath !== activeDir) {
         return
       }

@@ -228,7 +228,7 @@ export class IgnoreMatcher {
     // 2. 添加 .ignore 文件规则（按目录层级从根到当前）
     const sortedIgnoreFiles = Array.from(this.ignoreFiles.values())
       .sort((a, b) => {
-        // 按 basePath 深度排序：根目录优先级低，近目录优先级高
+        // 按 basePath 深度排序：目录优先级低，近目录优先级高
         const depthA = a.basePath.split(path.sep).length
         const depthB = b.basePath.split(path.sep).length
         return depthA - depthB
