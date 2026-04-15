@@ -42,7 +42,7 @@ interface FileGroup {
 interface SidebarContentProps {
   groups: FileGroup[]
   activePath: string | null
-  activeDir: string | null
+  activeRoot: string | null
   currentDir: string
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
@@ -64,7 +64,7 @@ interface SidebarContentProps {
 const SidebarContent = memo(function SidebarContent({
   groups,
   activePath,
-  activeDir,
+  activeRoot,
   currentDir,
   expandedPaths,
   setExpandedPaths,
@@ -83,7 +83,7 @@ const SidebarContent = memo(function SidebarContent({
   onDirChange,
 }: SidebarContentProps) {
   // 获取当前活动组的文件列表
-  const activeGroup = groups.find(g => g.root.path === activeDir)
+  const activeGroup = groups.find(g => g.root.path === activeRoot)
   const files = activeGroup?.files || []
 
   return (
@@ -110,7 +110,7 @@ const SidebarContent = memo(function SidebarContent({
           {groups.map(group => (
             <Button
               key={group.root.path}
-              variant={activeDir === group.root.path ? 'default' : 'ghost'}
+              variant={activeRoot === group.root.path ? 'default' : 'ghost'}
               size="sm"
               onClick={() => onDirChange?.(group.root.path)}
               className={cn(
@@ -136,7 +136,7 @@ const SidebarContent = memo(function SidebarContent({
       <FileTree
         files={files}
         activePath={activePath}
-        activeDir={activeDir}
+        activeRoot={activeRoot}
         currentDir={currentDir}
         expandedPaths={expandedPaths}
         setExpandedPaths={setExpandedPaths}
@@ -486,6 +486,15 @@ function App() {
         } else {
           filePath = hash
         }
+
+        // Guard: treat "/" or empty filePath as "no file selected"
+        if (!filePath || filePath === '/') {
+          loadingRef.current = null
+          setPath(null)
+          setContent('')
+          return
+        }
+
         load(filePath, rootPath)
         if (rootPath) {
           setActiveDir(rootPath)
@@ -729,7 +738,7 @@ function App() {
               <SidebarContent
                 groups={fileGroups}
                 activePath={path}
-                activeDir={activeDir}
+        activeRoot={activeDir}
                 currentDir={currentDir}
                 expandedPaths={expandedPaths}
                 setExpandedPaths={setExpandedPaths}
@@ -766,7 +775,7 @@ function App() {
               <SidebarContent
               groups={fileGroups}
               activePath={path}
-              activeDir={activeDir}
+              activeRoot={activeDir}
               currentDir={currentDir}
               expandedPaths={expandedPaths}
               setExpandedPaths={setExpandedPaths}
