@@ -7,6 +7,7 @@ import type { ColonynoteConfig, DirConfig } from '../config.js'
 import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
 import { minimatch } from 'minimatch'
+import fuzzysort from 'fuzzysort'
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -241,8 +242,6 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     const query = c.req.query('q') || ''
     if (!query.trim()) return c.json({ matches: [] })
 
-    const matches: string[] = []
-
     let searchRoot: string
     let searchTerm: string
 
@@ -270,18 +269,20 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       searchTerm = query
     }
 
-    const pattern = `*${searchTerm}*`
+    const candidates: string[] = []
+    const MAX_DEPTH = 5
+    const MAX_RESULTS = 100
 
     async function traverse(dir: string, depth: number): Promise<void> {
-      if (depth > 3 || matches.length >= 20) return
+      if (depth > MAX_DEPTH || candidates.length >= MAX_RESULTS) return
       try {
         const entries = await fs.readdir(dir, { withFileTypes: true })
         for (const entry of entries) {
-          if (matches.length >= 20) break
+          if (candidates.length >= MAX_RESULTS) break
           if (entry.name.startsWith('.')) continue
           const fullPath = path.join(dir, entry.name)
           if (entry.isDirectory() && !checkSensitivePath(fullPath)) {
-            if (minimatch(entry.name, pattern, { nocase: true })) matches.push(fullPath)
+            candidates.push(fullPath)
             await traverse(fullPath, depth + 1)
           }
         }
@@ -289,6 +290,18 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
 
     await traverse(searchRoot, 0)
+
+    const results = fuzzysort.go(searchTerm, candidates, {
+      limit: MAX_RESULTS,
+      threshold: -10000,
+    })
+
+    const matches = results.map(r => ({
+      path: r.target,
+      score: r.score,
+      indexes: r.indexes,
+    }))
+
     return c.json({ matches })
   })
 

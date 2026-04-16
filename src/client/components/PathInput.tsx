@@ -12,6 +12,43 @@ interface PathInputProps {
 
 interface SearchResult {
   path: string
+  score: number
+  indexes: number[]
+}
+
+function HighlightedPath({ path, indexes }: { path: string; indexes: number[] }) {
+  if (!indexes || indexes.length === 0) {
+    return <span className="truncate">{path}</span>
+  }
+  
+  const elements: React.ReactNode[] = []
+  let lastIndex = 0
+  
+  const sortedIndexes = [...indexes].sort((a, b) => a - b)
+  
+  for (let i = 0; i < sortedIndexes.length; i++) {
+    const idx = sortedIndexes[i]
+    
+    if (idx > lastIndex) {
+      elements.push(
+        <span key={`text-${i}`}>{path.slice(lastIndex, idx)}</span>
+      )
+    }
+    
+    elements.push(
+      <mark key={`highlight-${i}`} className="bg-primary/20 text-primary font-semibold rounded px-0.5">
+        {path[idx]}
+      </mark>
+    )
+    
+    lastIndex = idx + 1
+  }
+  
+  if (lastIndex < path.length) {
+    elements.push(<span key="text-end">{path.slice(lastIndex)}</span>)
+  }
+  
+  return <span className="truncate">{elements}</span>
 }
 
 export const PathInput = memo(function PathInput({
@@ -58,7 +95,7 @@ export const PathInput = memo(function PathInput({
       const res = await fetch(`/api/files/dirs/search?q=${encodeURIComponent(query)}`)
       if (!res.ok) throw new Error('Search failed')
       const data = await res.json()
-      setResults(data.matches.map((path: string) => ({ path })))
+      setResults(data.matches)
       setIsOpen(true)
       setSelectedIndex(-1)
     } catch (e) {
@@ -184,12 +221,10 @@ export const PathInput = memo(function PathInput({
                     index === selectedIndex && "bg-accent"
                   )}
                 >
-                  <span className={cn(
-                    "truncate",
-                    isMobile && "text-sm"
-                  )}>
-                    {result.path}
-                  </span>
+                  <HighlightedPath 
+                    path={result.path} 
+                    indexes={result.indexes}
+                  />
                 </CommandItem>
               ))
             )}
