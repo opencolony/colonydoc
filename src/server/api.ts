@@ -18,7 +18,7 @@ interface FileNode {
   name: string
   path: string
   type: 'file' | 'directory'
-  dirPath: string
+  rootPath: string
   children?: FileNode[]
 }
 
@@ -93,7 +93,7 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
           name: entry.name,
           path: relativePath ? '/' + relativePath : '/',
           type: 'directory',
-          dirPath,
+          rootPath: dirPath,
           children,
         })
       } else if (entry.isFile()) {
@@ -103,7 +103,7 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
             name: entry.name,
             path: relativePath ? '/' + relativePath : '/',
             type: 'file',
-            dirPath,
+            rootPath: dirPath,
           })
         }
       }

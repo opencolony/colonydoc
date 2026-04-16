@@ -107,7 +107,7 @@ async function main() {
   setupWatcher(config, matcher, {
     onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', filePath: string) => {
       const actualRootPath = findDirForPath(filePath, config)
-      const relativePath = filePath.replace(actualRootPath, '')
+      const relativePath = '/' + filePath.replace(actualRootPath, '').replace(/^\/+/, '')
       const message = JSON.stringify({ type: 'file:change', event, path: relativePath, rootPath: actualRootPath })
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
