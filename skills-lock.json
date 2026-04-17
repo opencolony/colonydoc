@@ -11,6 +11,11 @@
       "sourceType": "github",
       "computedHash": "7ff2f4650597e98ca4cd8f01231fb432ab4d187d6b12e641485aa871a04448cc"
     },
+    "tailwindcss-mobile-first": {
+      "source": "yuexiaoliang/skills",
+      "sourceType": "github",
+      "computedHash": "36b7655db92e535a94942acb619cd5806cc2d51608045e1a59dbacc1d8e80a9f"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
