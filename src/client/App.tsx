@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react'
-import { Plus, Code, Eye, List, FileText, Folder, Search, X, Settings, GripVertical, AlertCircle } from 'lucide-react'
+import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, GripVertical, AlertCircle } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
 import { useSearch } from './hooks/useSearch'
@@ -11,6 +11,8 @@ import { RenameDialog } from './components/RenameDialog'
 import { MoveFileModal } from './components/MoveFileModal'
 import { CopyFileModal } from './components/CopyFileModal'
 import { SettingsDialog } from './components/SettingsDialog'
+import { AddDirDialog } from './components/AddDirDialog'
+import { EditDirDialog } from './components/EditDirDialog'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import {
@@ -24,6 +26,7 @@ import {
   AlertDialogTitle,
 } from './components/ui/alert-dialog'
 import { cn } from './lib/utils'
+import type { DirConfig } from './lib/types'
 
 interface FileNode {
   name: string
@@ -34,7 +37,7 @@ interface FileNode {
 }
 
 interface FileGroup {
-  root: { path: string; exclude?: string[] }
+  root: DirConfig
   files: FileNode[]
   error?: string
 }
@@ -59,6 +62,8 @@ interface SidebarContentProps {
   onSettingsOpen?: () => void
   onClose?: () => void
   onDirChange?: (dirPath: string) => void
+  onAddDir?: () => void
+  onEditDir?: () => void
 }
 
 const SidebarContent = memo(function SidebarContent({
@@ -81,6 +86,8 @@ const SidebarContent = memo(function SidebarContent({
   onSettingsOpen,
   onClose,
   onDirChange,
+  onAddDir,
+  onEditDir,
 }: SidebarContentProps) {
   // 获取当前活动组的文件列表
   const activeGroup = groups.find(g => g.root.path === activeRoot)
@@ -104,9 +111,18 @@ const SidebarContent = memo(function SidebarContent({
           </Button>
         </div>
       </div>
-      {/* 多目录切换 */}
-      {groups.length > 1 && (
-        <div className="flex gap-1 px-4 py-2 border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
+      {/* 目录切换 */}
+      {groups.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 px-4 text-center border-b border-border">
+          <FolderOpen className="size-12 mb-3 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground mb-4">暂无目录</p>
+          <Button variant="outline" size="sm" onClick={() => onAddDir?.()}>
+            <Plus className="size-4 mr-1" />
+            添加目录
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 px-4 py-2 border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
           {groups.map(group => (
             <Button
               key={group.root.path}
@@ -123,7 +139,7 @@ const SidebarContent = memo(function SidebarContent({
                 <AlertCircle className="size-3 mr-1 text-destructive shrink-0" />
               )}
               <span className="truncate max-w-[100px] md:max-w-[150px] min-w-0 flex-shrink-0">
-                {group.root.path.split('/').pop() || group.root.path}
+                {group.root.name || group.root.path.split('/').pop() || group.root.path}
               </span>
               {/* Desktop tooltip */}
               <span className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
@@ -131,6 +147,9 @@ const SidebarContent = memo(function SidebarContent({
               </span>
             </Button>
           ))}
+          <Button variant="ghost" size="icon" className="size-6" onClick={() => onAddDir?.()} title="添加目录">
+            <Plus className="size-4" />
+          </Button>
         </div>
       )}
       <FileTree
@@ -150,6 +169,7 @@ const SidebarContent = memo(function SidebarContent({
         onEditingChange={onEditingChange}
         onCreateSubmit={onCreateSubmit}
         onCreateRequest={onCreateRequest}
+        onEditDir={onEditDir}
       />
     </div>
   )
@@ -179,6 +199,9 @@ function App() {
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false)
   const [pendingExternalChange, setPendingExternalChange] = useState<string | null>(null)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
+  const [addDirDialogOpen, setAddDirDialogOpen] = useState(false)
+  const [editDirDialogOpen, setEditDirDialogOpen] = useState(false)
+  const [editDirPath, setEditDirPath] = useState<string | null>(null)
 
   const [isSaving, setIsSaving] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -764,6 +787,8 @@ function App() {
                 onSettingsOpen={() => setSettingsDialogOpen(true)}
                 onClose={() => setDrawerVisible(false)}
                 onDirChange={handleDirChange}
+                onAddDir={() => setAddDirDialogOpen(true)}
+                onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
               />
             </aside>
           </>
@@ -800,6 +825,8 @@ function App() {
               onCreateRequest={handleCreateRequest}
               onSettingsOpen={() => setSettingsDialogOpen(true)}
               onDirChange={handleDirChange}
+              onAddDir={() => setAddDirDialogOpen(true)}
+              onEditDir={() => { setEditDirPath(activeDir); setEditDirDialogOpen(true) }}
             />
             </aside>
             <div
@@ -952,6 +979,17 @@ function App() {
       <SettingsDialog
         open={settingsDialogOpen}
         onOpenChange={setSettingsDialogOpen}
+      />
+
+      <AddDirDialog
+        open={addDirDialogOpen}
+        onOpenChange={setAddDirDialogOpen}
+      />
+
+      <EditDirDialog
+        open={editDirDialogOpen}
+        onOpenChange={setEditDirDialogOpen}
+        dirPath={editDirPath}
       />
     </div>
   )

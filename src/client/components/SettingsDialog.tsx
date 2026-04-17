@@ -18,14 +18,9 @@ import { Button } from "./ui/button"
 import { Switch } from "./ui/switch"
 import { PathInput } from "./PathInput"
 import { cn } from "@/client/lib/utils"
+import type { DirConfig } from "@/client/lib/types"
 
 type ThemeMode = 'light' | 'dark' | 'system'
-
-interface DirConfig {
-  path: string
-  exclude?: string[]
-  isCli?: boolean
-}
 
 interface SettingsDialogProps {
   open: boolean

@@ -200,7 +200,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       const nested = checkNestedPath(newPath, config.dirs)
       if (nested.isNested) return c.json({ error: 'Nested path not allowed', conflictWith: nested.conflictWith, reason: nested.reason }, 400)
 
-      const newDir: DirConfig = { path: path.resolve(newPath), exclude: body.exclude }
+      const newDir: DirConfig = { path: path.resolve(newPath), exclude: body.exclude, name: body.name }
       config.dirs.push(newDir)
       saveConfig(config)
       return c.json({ success: true, dir: newDir })
@@ -224,13 +224,14 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
   router.patch('/dirs', async (c) => {
     try {
       const body = await c.req.json()
-      const { path: dirPath, exclude } = body
+      const { path: dirPath, exclude, name } = body
       if (!dirPath) return c.json({ error: 'Path is required' }, 400)
 
       const dir = config.dirs.find(r => path.resolve(r.path) === path.resolve(dirPath))
       if (!dir) return c.json({ error: 'Dir not found' }, 404)
 
       if (exclude !== undefined) dir.exclude = exclude
+      if (name !== undefined) dir.name = name
       saveConfig(config)
       return c.json({ success: true, dir })
     } catch (e) {

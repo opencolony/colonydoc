@@ -5,6 +5,7 @@ import markdownExtensions from 'markdown-extensions'
 
 export interface DirConfig {
   path: string
+  name?: string
   exclude?: string[]
   isCli?: boolean
 }

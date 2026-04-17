@@ -1,5 +1,5 @@
 import { memo, SetStateAction, useState, useRef, useEffect } from 'react'
-import { ChevronRight, File, Folder, Trash2, FileText, MoreHorizontal } from 'lucide-react'
+import { ChevronRight, File, Folder, Trash2, FileText, MoreHorizontal, Pencil } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -50,6 +50,7 @@ interface FileTreeProps {
   onEditingChange?: (type: 'file' | 'directory' | null) => void
   onCreateSubmit?: (name: string, isDirectory: boolean) => void
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
+  onEditDir?: () => void
 }
 
 function TreeNode({ node, activePath, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, currentDir, activeRoot }: {
@@ -260,7 +261,7 @@ const EmptyState = ({ activeRoot }: { activeRoot: string | null }) => {
   )
 }
 
-export const FileTree = memo(function FileTree({ files, activePath, activeRoot, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest }: FileTreeProps) {
+export const FileTree = memo(function FileTree({ files, activePath, activeRoot, currentDir, expandedPaths, setExpandedPaths, onSelect, onDelete, onRenameRequest, onMoveRequest, onCopyRequest, onExpand, editingType, onEditingChange, onCreateSubmit, onCreateRequest, onEditDir }: FileTreeProps) {
   const [editName, setEditName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -336,6 +337,15 @@ export const FileTree = memo(function FileTree({ files, activePath, activeRoot, 
                 title="新建文件夹"
               >
                 <Folder className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={() => onEditDir?.()}
+                title="目录设置"
+              >
+                <Pencil className="size-4" />
               </Button>
             </div>
           </div>
