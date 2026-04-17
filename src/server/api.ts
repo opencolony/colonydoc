@@ -239,6 +239,42 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
+  router.get('/dirs/browse', async (c) => {
+    const rawPath = c.req.query('path') || ''
+    if (!rawPath.trim()) return c.json({ dirs: [], currentPath: '' })
+
+    let resolvedPath: string
+    if (rawPath === '~' || rawPath.startsWith('~/')) {
+      resolvedPath = path.join(os.homedir(), rawPath.slice(1))
+    } else {
+      resolvedPath = path.resolve(rawPath)
+    }
+
+    try {
+      const stat = await fs.stat(resolvedPath)
+      if (!stat.isDirectory()) {
+        return c.json({ dirs: [], currentPath: rawPath })
+      }
+
+      const entries = await fs.readdir(resolvedPath, { withFileTypes: true })
+      const dirs: string[] = []
+
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue
+        const fullPath = path.join(resolvedPath, entry.name)
+        if (entry.isDirectory() && !checkSensitivePath(fullPath)) {
+          dirs.push(fullPath)
+        }
+      }
+
+      dirs.sort((a, b) => path.basename(a).localeCompare(path.basename(b)))
+
+      return c.json({ dirs, currentPath: rawPath })
+    } catch {
+      return c.json({ dirs: [], currentPath: rawPath })
+    }
+  })
+
   router.get('/dirs/search', async (c) => {
     const query = c.req.query('q') || ''
     if (!query.trim()) return c.json({ matches: [] })
@@ -278,14 +314,21 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
       if (depth > MAX_DEPTH || candidates.length >= MAX_RESULTS) return
       try {
         const entries = await fs.readdir(dir, { withFileTypes: true })
+        const subDirs: string[] = []
         for (const entry of entries) {
-          if (candidates.length >= MAX_RESULTS) break
           if (entry.name.startsWith('.')) continue
           const fullPath = path.join(dir, entry.name)
           if (entry.isDirectory() && !checkSensitivePath(fullPath)) {
-            candidates.push(fullPath)
-            await traverse(fullPath, depth + 1)
+            subDirs.push(fullPath)
           }
+        }
+        for (const subDir of subDirs) {
+          if (candidates.length >= MAX_RESULTS) break
+          candidates.push(subDir)
+        }
+        for (const subDir of subDirs) {
+          if (candidates.length >= MAX_RESULTS) break
+          await traverse(subDir, depth + 1)
         }
       } catch {}
     }
