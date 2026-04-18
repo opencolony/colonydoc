@@ -294,12 +294,13 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
 
     const MAX_DEPTH = 5
+    const MAX_CANDIDATES = 10000
     const MAX_RESULTS = 100
 
     const candidates: { name: string; fullPath: string }[] = []
 
     async function traverse(dir: string, depth: number): Promise<void> {
-      if (depth > MAX_DEPTH || candidates.length >= MAX_RESULTS) return
+      if (depth > MAX_DEPTH || candidates.length >= MAX_CANDIDATES) return
       try {
         const entries = await fs.readdir(dir, { withFileTypes: true })
         const subDirs: string[] = []
@@ -311,11 +312,11 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
           }
         }
         for (const subDir of subDirs) {
-          if (candidates.length >= MAX_RESULTS) break
+          if (candidates.length >= MAX_CANDIDATES) break
           candidates.push({ name: path.basename(subDir), fullPath: subDir })
         }
         for (const subDir of subDirs) {
-          if (candidates.length >= MAX_RESULTS) break
+          if (candidates.length >= MAX_CANDIDATES) break
           await traverse(subDir, depth + 1)
         }
       } catch {}
