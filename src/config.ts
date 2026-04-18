@@ -70,7 +70,21 @@ const defaultConfig: ColonynoteConfig = {
     debounceMs: 300,
   },
   ignore: {
-    patterns: [],
+    patterns: [
+      'node_modules',
+      '.git',
+      '.next',
+      '.nuxt',
+      '.output',
+      'dist',
+      'build',
+      '.cache',
+      '.turbo',
+      '.vite',
+      'coverage',
+      '.DS_Store',
+      'Thumbs.db',
+    ],
   },
 }
 
