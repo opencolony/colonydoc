@@ -7,12 +7,9 @@ import { IgnoreMatcher, defaultIgnoreConfig } from './ignore.js'
 export function createApp(config: ColonynoteConfig) {
   const app = new Hono()
 
-  const ignoreConfig = {
-    enableIgnoreFiles: config.ignore.enableIgnoreFiles,
-    ignoreFileNames: config.ignore.ignoreFileNames,
+  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
     globalPatterns: config.ignore.patterns,
-  }
-  const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), ignoreConfig)
+  })
 
   app.use('*', cors())
 

@@ -140,7 +140,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     try {
       const body = await c.req.json()
       const allowedFields = ['showHiddenFiles', 'allowedExtensions', 'ignore']
-      const updates: { showHiddenFiles?: boolean; allowedExtensions?: string[]; ignore?: { enableIgnoreFiles?: boolean; ignoreFileNames?: string[]; patterns?: string[] } } = {}
+      const updates: { showHiddenFiles?: boolean; allowedExtensions?: string[]; ignore?: { patterns?: string[] } } = {}
 
       for (const key of allowedFields) {
         if (key in body) {
@@ -157,17 +157,10 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
         config.allowedExtensions = updates.allowedExtensions
       }
       if (updates.ignore) {
-        if (typeof updates.ignore.enableIgnoreFiles === 'boolean') {
-          config.ignore.enableIgnoreFiles = updates.ignore.enableIgnoreFiles
-        }
-        if (Array.isArray(updates.ignore.ignoreFileNames)) {
-          config.ignore.ignoreFileNames = updates.ignore.ignoreFileNames
-        }
         if (Array.isArray(updates.ignore.patterns)) {
           config.ignore.patterns = updates.ignore.patterns
           matcher.updateGlobalPatterns(updates.ignore.patterns)
         }
-        matcher.clearCache()
       }
 
       return c.json({ success: true, config: { showHiddenFiles: config.showHiddenFiles, allowedExtensions: config.allowedExtensions, ignore: config.ignore } })
@@ -312,6 +305,14 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
         for (const entry of entries) {
           if (entry.name.startsWith('.')) continue
           const fullPath = path.join(dir, entry.name)
+
+          // Check if path matches any ignore pattern
+          const isIgnored = config.ignore?.patterns?.some(pattern => {
+            const normalizedPattern = pattern.endsWith('/') ? pattern.slice(0, -1) : pattern
+            return minimatch(fullPath, normalizedPattern, { dot: true, matchBase: true })
+          })
+          if (isIgnored) continue
+
           if (entry.isDirectory() && !checkSensitivePath(fullPath)) {
             subDirs.push(fullPath)
           }

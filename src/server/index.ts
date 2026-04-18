@@ -26,8 +26,6 @@ async function main() {
   const config = await loadConfig()
 
   const matcher = new IgnoreMatcher(config.dirs[0]?.path || process.cwd(), {
-    enableIgnoreFiles: config.ignore.enableIgnoreFiles,
-    ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
   })
 

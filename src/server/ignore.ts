@@ -28,9 +28,9 @@ interface IgnoreFile {
  */
 export interface IgnoreConfig {
   /** 是否启用 .colonynoteignore 文件查找 */
-  enableIgnoreFiles: boolean
+  enableIgnoreFiles?: boolean
   /** .ignore 文件名称列表（按优先级排序） */
-  ignoreFileNames: string[]
+  ignoreFileNames?: string[]
   /** 全局忽略模式（来自配置文件） */
   globalPatterns: string[]
 }
@@ -132,7 +132,7 @@ export class IgnoreMatcher {
    * 从 targetPath 向上查找，直到 rootPath
    */
   findAndLoadIgnoreFiles(targetPath: string): void {
-    if (!this.config.enableIgnoreFiles) return
+    if (this.config.enableIgnoreFiles === false) return
 
     let currentPath = path.resolve(targetPath)
 
@@ -147,7 +147,7 @@ export class IgnoreMatcher {
     }
 
     while (currentPath.startsWith(this.rootPath) && currentPath.length >= this.rootPath.length) {
-      for (const fileName of this.config.ignoreFileNames) {
+      for (const fileName of (this.config.ignoreFileNames || [])) {
         const ignoreFilePath = path.join(currentPath, fileName)
 
         // 避免重复加载

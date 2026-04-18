@@ -32,8 +32,6 @@ interface SettingsState {
   allowedExtensions: string
   themeMode: ThemeMode
   ignore: {
-    enableIgnoreFiles: boolean
-    ignoreFileNames: string
     patterns: string
   }
 }
@@ -56,8 +54,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     allowedExtensions: '.md,.markdown,.mdown,.mkdn,.mkd,.mdwn,.mkdown,.ron',
     themeMode: 'system',
     ignore: {
-      enableIgnoreFiles: true,
-      ignoreFileNames: '.colonynoteignore, .gitignore',
       patterns: '',
     },
   })
@@ -128,8 +124,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             allowedExtensions: (data.allowedExtensions || []).join(','),
             themeMode: getThemeMode(),
             ignore: {
-              enableIgnoreFiles: data.ignore?.enableIgnoreFiles ?? true,
-              ignoreFileNames: (data.ignore?.ignoreFileNames || ['.colonynoteignore', '.gitignore']).join(', '),
               patterns: (data.ignore?.patterns || []).join('\n'),
             },
           })
@@ -184,11 +178,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         .map(ext => ext.trim())
         .filter(ext => ext.startsWith('.'))
 
-      const ignoreFileNames = settings.ignore.ignoreFileNames
-        .split(',')
-        .map(name => name.trim())
-        .filter(Boolean)
-
       const patterns = settings.ignore.patterns
         .split('\n')
         .map(p => p.trim())
@@ -201,8 +190,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           showHiddenFiles: settings.showHiddenFiles,
           allowedExtensions: extensions,
           ignore: {
-            enableIgnoreFiles: settings.ignore.enableIgnoreFiles,
-            ignoreFileNames,
             patterns,
           },
         }),
@@ -416,42 +403,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
         <div className="border-t border-border pt-4 space-y-4">
           <div className="text-sm font-medium">忽略设置</div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <label htmlFor="enable-ignore" className="text-sm font-medium leading-none">
-                启用忽略文件
-              </label>
-              <p className="text-xs text-muted-foreground">
-                自动加载 .colonynoteignore 和 .gitignore
-              </p>
-            </div>
-            <Switch
-              id="enable-ignore"
-              checked={settings.ignore.enableIgnoreFiles}
-              onCheckedChange={(checked) =>
-                setSettings(prev => ({ ...prev, ignore: { ...prev.ignore, enableIgnoreFiles: checked } }))
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="ignore-names" className="text-sm font-medium leading-none">
-              忽略文件名
-            </label>
-            <p className="text-xs text-muted-foreground">
-              要查找的忽略文件名称，用逗号分隔
-            </p>
-            <input
-              id="ignore-names"
-              value={settings.ignore.ignoreFileNames}
-              onChange={(e) =>
-                setSettings(prev => ({ ...prev, ignore: { ...prev.ignore, ignoreFileNames: e.target.value } }))
-              }
-              placeholder=".colonynoteignore, .gitignore"
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
 
           <div className="space-y-2">
             <label htmlFor="ignore-patterns" className="text-sm font-medium leading-none">

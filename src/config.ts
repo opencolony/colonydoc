@@ -23,8 +23,6 @@ export interface ColonynoteConfig {
     debounceMs: number
   }
   ignore: {
-    enableIgnoreFiles: boolean
-    ignoreFileNames: string[]
     patterns: string[]
   }
 }
@@ -72,8 +70,6 @@ const defaultConfig: ColonynoteConfig = {
     debounceMs: 300,
   },
   ignore: {
-    enableIgnoreFiles: true,
-    ignoreFileNames: ['.colonynoteignore', '.gitignore'],
     patterns: [],
   },
 }
