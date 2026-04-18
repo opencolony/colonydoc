@@ -53,7 +53,7 @@ async function main() {
         console.warn(`Skipping duplicate root: ${rootPath}`)
         continue
       }
-      config.dirs.unshift({ path: rootPath, isCli: true } as DirConfig)
+      config.dirs.unshift({ path: resolvedPath, isCli: true } as DirConfig)
     }
   }
 
