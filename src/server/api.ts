@@ -283,12 +283,17 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     if (!query.trim()) return c.json({ matches: [] })
 
     let searchRoot: string
-    if (rawRoot === '~') {
+    if (rawRoot === '~' || rawRoot === '') {
       searchRoot = os.homedir()
     } else if (rawRoot === '/') {
       searchRoot = '/'
+    } else if (rawRoot && rawRoot.startsWith('~/')) {
+      searchRoot = path.join(os.homedir(), rawRoot.slice(2))
     } else if (rawRoot && path.isAbsolute(rawRoot)) {
       searchRoot = path.normalize(rawRoot)
+    } else if (rawRoot) {
+      // Relative path like 'projects' → resolve relative to home
+      searchRoot = path.join(os.homedir(), rawRoot)
     } else {
       searchRoot = os.homedir()
     }
