@@ -399,6 +399,10 @@
   background: oklch(25% 0 0 / 0.15);
 }
 
+.dark .tiptap-editor .tiptap ::selection {
+  background: oklch(80% 0 0 / 0.25);
+}
+
 /* Code Block Styles */
 .code-block-wrapper {
   @apply my-4 rounded-xl overflow-hidden;
