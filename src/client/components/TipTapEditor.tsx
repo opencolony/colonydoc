@@ -20,6 +20,7 @@ import mermaid from 'mermaid'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { Maximize2 } from 'lucide-react'
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
+import { MobileToolbar } from './MobileToolbar'
 
 const isDarkMode = () => document.documentElement.classList.contains('dark')
 
@@ -175,6 +176,17 @@ const CustomCodeBlock = CodeBlockLowlight.extend({
 export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, onLinkClick }: TipTapEditorProps) {
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  })
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const editor = useEditor({
     extensions: [
@@ -360,6 +372,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
   return (
     <div className="tiptap-editor-wrapper">
       <EditorContent editor={editor} className="tiptap-editor" />
+      {isMobile && mode === 'wysiwyg' && <MobileToolbar editor={editor} />}
     </div>
   )
 }

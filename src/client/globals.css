@@ -1068,3 +1068,44 @@
 .dir-tabs-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* Mobile Toolbar Styles */
+.mobile-toolbar {
+  @apply flex items-center gap-1 px-2 py-1 border-t border-border bg-background;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-toolbar-btn {
+  @apply flex items-center justify-center size-11 min-h-11 min-w-11 rounded-lg shrink-0 transition-colors;
+  color: var(--color-muted-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-toolbar-btn:hover {
+  @apply bg-accent text-accent-foreground;
+}
+
+.mobile-toolbar-btn:active {
+  transform: scale(0.92);
+}
+
+.mobile-toolbar-btn.active {
+  @apply bg-primary/10 text-primary;
+}
+
+/* Ensure editor content has bottom padding so toolbar doesn't overlap */
+@media (max-width: 767px) {
+  .tiptap-editor .tiptap {
+    padding-bottom: 4rem;
+  }
+}
