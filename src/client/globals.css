@@ -1114,6 +1114,98 @@
   @apply bg-primary/10 text-primary;
 }
 
+/* Heading Dropdown */
+.editor-toolbar-heading {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.editor-toolbar-btn-heading {
+  @apply flex items-center gap-0.5 px-2 h-9 min-h-9 rounded-lg shrink-0 transition-colors;
+  color: var(--color-muted-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.editor-toolbar-btn-heading:hover {
+  @apply bg-accent text-accent-foreground;
+}
+
+.editor-toolbar-btn-heading.open {
+  @apply bg-accent text-accent-foreground;
+}
+
+.editor-toolbar-btn-heading.active {
+  @apply bg-primary/10 text-primary;
+}
+
+.editor-toolbar-btn-heading-label {
+  line-height: 1;
+}
+
+.editor-toolbar-dropdown-menu {
+  @apply absolute top-full left-0 mt-1 bg-popover border border-border rounded-lg shadow-lg py-1 z-50 min-w-[80px];
+}
+
+.editor-toolbar-dropdown-item {
+  @apply w-full px-3 py-1.5 text-left transition-colors;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-foreground);
+  font-size: 0.85rem;
+}
+
+.editor-toolbar-dropdown-item:hover {
+  @apply bg-accent;
+}
+
+.editor-toolbar-dropdown-item.active {
+  @apply bg-primary/10 text-primary;
+}
+
+.heading-label {
+  font-weight: 500;
+}
+
+.heading-label.heading-0 {
+  font-size: 0.85rem;
+}
+
+.heading-label.heading-1 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.heading-label.heading-2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.heading-label.heading-3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.heading-label.heading-4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.heading-label.heading-5 {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.heading-label.heading-6 {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 /* Ensure editor content has bottom padding on mobile so toolbar doesn't overlap */
 @media (max-width: 767px) {
   .tiptap-editor .tiptap {

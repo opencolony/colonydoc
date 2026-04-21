@@ -2,17 +2,13 @@ import { type Editor } from '@tiptap/react'
 import {
   Bold,
   Italic,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading5,
-  Heading6,
+  ChevronDown,
   List,
   ListOrdered,
   Quote,
   Code,
 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 
 interface EditorToolbarProps {
   editor: Editor | null
@@ -24,6 +20,85 @@ interface ToolbarButtonConfig {
   label: string
   isActive: (editor: Editor) => boolean
   action: (editor: Editor) => void
+}
+
+const HEADING_LEVELS = [
+  { level: 0, label: '正文' },
+  { level: 1, label: 'H1' },
+  { level: 2, label: 'H2' },
+  { level: 3, label: 'H3' },
+  { level: 4, label: 'H4' },
+  { level: 5, label: 'H5' },
+  { level: 6, label: 'H6' },
+] as const
+
+function HeadingDropdown({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const currentLevel = (() => {
+    for (let i = 1; i <= 6; i++) {
+      if (editor.isActive('heading', { level: i })) return i
+    }
+    return 0
+  })()
+
+  const currentLabel = HEADING_LEVELS.find(h => h.level === currentLevel)?.label || '正文'
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  const selectHeading = (level: number) => {
+    if (level === 0) {
+      editor.chain().focus().setParagraph().run()
+    } else {
+      editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run()
+    }
+    setOpen(false)
+  }
+
+  return (
+    <div className="editor-toolbar-heading" ref={dropdownRef}>
+      <button
+        type="button"
+        contentEditable={false}
+        className={`editor-toolbar-btn editor-toolbar-btn-heading ${open ? 'open' : ''} ${currentLevel > 0 ? 'active' : ''}`}
+        onClick={() => setOpen(!open)}
+        title="标题"
+        aria-expanded={open}
+      >
+        <span className="editor-toolbar-btn-heading-label">{currentLabel}</span>
+        <ChevronDown className="size-3" />
+      </button>
+      {open && (
+        <div className="editor-toolbar-dropdown-menu">
+          {HEADING_LEVELS.map(h => {
+            const isActive = h.level === currentLevel
+            return (
+              <button
+                key={h.level}
+                type="button"
+                contentEditable={false}
+                className={`editor-toolbar-dropdown-item ${isActive ? 'active' : ''}`}
+                onClick={() => selectHeading(h.level)}
+              >
+                <span className={`heading-label heading-${h.level}`}>{h.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const toolbarButtons: ToolbarButtonConfig[] = [
@@ -38,42 +113,6 @@ const toolbarButtons: ToolbarButtonConfig[] = [
     label: '斜体',
     isActive: (editor) => editor.isActive('italic'),
     action: (editor) => editor.chain().focus().toggleItalic().run(),
-  },
-  {
-    icon: Heading1,
-    label: '标题 1',
-    isActive: (editor) => editor.isActive('heading', { level: 1 }),
-    action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
-  },
-  {
-    icon: Heading2,
-    label: '标题 2',
-    isActive: (editor) => editor.isActive('heading', { level: 2 }),
-    action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-  },
-  {
-    icon: Heading3,
-    label: '标题 3',
-    isActive: (editor) => editor.isActive('heading', { level: 3 }),
-    action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-  },
-  {
-    icon: Heading4,
-    label: '标题 4',
-    isActive: (editor) => editor.isActive('heading', { level: 4 }),
-    action: (editor) => editor.chain().focus().toggleHeading({ level: 4 }).run(),
-  },
-  {
-    icon: Heading5,
-    label: '标题 5',
-    isActive: (editor) => editor.isActive('heading', { level: 5 }),
-    action: (editor) => editor.chain().focus().toggleHeading({ level: 5 }).run(),
-  },
-  {
-    icon: Heading6,
-    label: '标题 6',
-    isActive: (editor) => editor.isActive('heading', { level: 6 }),
-    action: (editor) => editor.chain().focus().toggleHeading({ level: 6 }).run(),
   },
   {
     icon: List,
@@ -108,6 +147,7 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
 
   return (
     <div className={`editor-toolbar editor-toolbar-${variant}`}>
+      <HeadingDropdown editor={editor} />
       {toolbarButtons.map((btn) => {
         const Icon = btn.icon
         const active = btn.isActive(editor)
