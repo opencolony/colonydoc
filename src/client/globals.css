@@ -1148,7 +1148,19 @@
 }
 
 .editor-toolbar-dropdown-menu {
-  @apply absolute top-full left-0 mt-1 bg-popover border border-border rounded-lg shadow-lg py-1 z-50 min-w-[80px];
+  @apply absolute left-0 bg-popover border border-border rounded-lg shadow-lg py-1 z-50 min-w-[80px];
+  top: 100%;
+  margin-top: 0.25rem;
+}
+
+/* Mobile: dropdown opens upward since toolbar is at bottom */
+@media (max-width: 767px) {
+  .editor-toolbar-dropdown-menu {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+  }
 }
 
 .editor-toolbar-dropdown-item {

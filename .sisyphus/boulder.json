@@ -1,12 +1,12 @@
 {
-  "active_plan": "/home/yuexiaoliang/projects/note/.sisyphus/plans/heading-dropdown.md",
-  "started_at": "2026-04-21T01:50:10.061Z",
+  "active_plan": "/home/yuexiaoliang/projects/note/.sisyphus/plans/fix-mobile-dropdown.md",
+  "started_at": "2026-04-21T02:36:52.033Z",
   "session_ids": [
     "ses_252851875ffeKQF0OZEjuc5BdA"
   ],
   "session_origins": {
     "ses_252851875ffeKQF0OZEjuc5BdA": "direct"
   },
-  "plan_name": "heading-dropdown",
+  "plan_name": "fix-mobile-dropdown",
   "agent": "atlas"
 }
