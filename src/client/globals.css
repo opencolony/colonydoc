@@ -1121,13 +1121,14 @@
 }
 
 .editor-toolbar-btn-heading {
-  @apply flex items-center gap-0.5 px-2 h-9 min-h-9 rounded-lg shrink-0 transition-colors;
+  @apply flex items-center gap-0.5 px-2 h-9 rounded-lg shrink-0 transition-colors w-auto min-w-0;
   color: var(--color-muted-foreground);
   background: transparent;
   border: none;
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 500;
+  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1153,13 +1154,18 @@
   margin-top: 0.25rem;
 }
 
-/* Mobile: dropdown opens upward since toolbar is at bottom */
+/* Mobile: dropdown as fixed bottom sheet to escape overflow clipping */
 @media (max-width: 767px) {
-  .editor-toolbar-dropdown-menu {
-    top: auto;
-    bottom: 100%;
-    margin-top: 0;
-    margin-bottom: 0.25rem;
+  .editor-toolbar-dropdown-menu-mobile {
+    position: fixed !important;
+    top: auto !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 44px) !important;
+    margin: 0 !important;
+    max-height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

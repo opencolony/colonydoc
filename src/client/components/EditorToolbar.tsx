@@ -32,7 +32,12 @@ const HEADING_LEVELS = [
   { level: 6, label: 'H6' },
 ] as const
 
-function HeadingDropdown({ editor }: { editor: Editor }) {
+interface HeadingDropdownProps {
+  editor: Editor
+  variant?: 'desktop' | 'mobile'
+}
+
+function HeadingDropdown({ editor, variant = 'desktop' }: HeadingDropdownProps) {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -80,7 +85,7 @@ function HeadingDropdown({ editor }: { editor: Editor }) {
         <ChevronDown className="size-3" />
       </button>
       {open && (
-        <div className="editor-toolbar-dropdown-menu">
+        <div className={`editor-toolbar-dropdown-menu ${variant === 'mobile' ? 'editor-toolbar-dropdown-menu-mobile' : ''}`}>
           {HEADING_LEVELS.map(h => {
             const isActive = h.level === currentLevel
             return (
@@ -147,7 +152,7 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
 
   return (
     <div className={`editor-toolbar editor-toolbar-${variant}`}>
-      <HeadingDropdown editor={editor} />
+      <HeadingDropdown editor={editor} variant={variant} />
       {toolbarButtons.map((btn) => {
         const Icon = btn.icon
         const active = btn.isActive(editor)
