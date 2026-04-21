@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import os from 'os'
+import { execFile } from 'child_process'
 import type { ColonynoteConfig, DirConfig } from '../config.js'
 import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
@@ -411,77 +412,6 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
   })
 
-  router.post('/search/hashes', async (c) => {
-    try {
-      const body = await c.req.json()
-      const paths: string[] = body.paths || []
-      if (paths.length === 0) return c.json({ error: 'paths array is required' }, 400)
-
-      const results: { path: string; hash: string }[] = []
-
-      for (const filePath of paths) {
-        const dirPath = findRootForPath(filePath, config)
-        if (!dirPath) continue
-
-        const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
-        const fullPath = path.join(dirPath, relativePath)
-
-        if (!isAllowed(fullPath, config)) continue
-
-        try {
-          const stat = await fs.stat(fullPath)
-          if (stat.isFile()) {
-            // Quick hash: size + mtime, no need to read content
-            const hash = `size:${stat.size}:mtime:${stat.mtimeMs}`
-            results.push({ path: filePath, hash })
-          }
-        } catch {
-          // skip unreadable files
-        }
-      }
-
-      return c.json({ files: results })
-    } catch (e) {
-      return c.json({ error: 'Failed to fetch hashes' }, 500)
-    }
-  })
-
-  router.post('/search/content', async (c) => {
-    try {
-      const body = await c.req.json()
-      const paths: string[] = body.paths || []
-      if (paths.length === 0) return c.json({ error: 'paths array is required' }, 400)
-
-      const results: { path: string; name: string; content: string; hash: string }[] = []
-
-      for (const filePath of paths) {
-        const dirPath = findRootForPath(filePath, config)
-        if (!dirPath) continue
-
-        const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
-        const fullPath = path.join(dirPath, relativePath)
-
-        if (!isAllowed(fullPath, config)) continue
-
-        try {
-          const stat = await fs.stat(fullPath)
-          if (stat.isFile()) {
-            const content = await fs.readFile(fullPath, 'utf-8')
-            // Simple hash: length + first/last 64 chars for quick diff
-            const hash = `${content.length}:${content.slice(0, 64)}|${content.slice(-64)}`
-            results.push({ path: filePath, name: path.basename(filePath), content, hash })
-          }
-        } catch {
-          // skip unreadable files
-        }
-      }
-
-      return c.json({ files: results })
-    } catch (e) {
-      return c.json({ error: 'Failed to fetch contents' }, 500)
-    }
-  })
-
   router.get('/content', async (c) => {
     const pathsParam = c.req.query('paths')
     if (!pathsParam) {
@@ -528,6 +458,84 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     }
 
     return c.json({ files: results })
+  })
+
+  router.get('/search', async (c) => {
+    const query = c.req.query('q')
+    if (!query || !query.trim()) {
+      return c.json({ results: [] })
+    }
+
+    const limit = parseInt(c.req.query('limit') || '50', 10)
+    const results: Array<{ path: string; name: string; rootPath: string; rootName: string; matchedLine?: string; matchedContent?: string }> = []
+
+    for (const dir of config.dirs) {
+      if (results.length >= limit) break
+
+      const dirPath = path.resolve(dir.path)
+      const dirName = dir.name || path.basename(dirPath)
+
+      try {
+        const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+          execFile('rg', [
+            '--json',
+            '--ignore-case',
+            '--max-count', String(Math.min(limit, 5)),
+            '--line-number',
+            '--context', '1',
+            '-g', '*.md',
+            query,
+            dirPath,
+          ], { timeout: 5000, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+            if (error && error.code !== 1) {
+              reject(error)
+            } else {
+              resolve({ stdout, stderr })
+            }
+          })
+        })
+
+        if (stderr.includes('no matches')) continue
+
+        let currentPath = ''
+        let currentRelativePath = ''
+        let lines: Array<{ line: string; lineNumber: number; subMatches: Array<{ start: number; end: number }> }> = []
+
+        for (const rawLine of stdout.split('\n')) {
+          if (!rawLine.trim()) continue
+          try {
+            const obj = JSON.parse(rawLine)
+
+            if (obj.type === 'begin') {
+              currentPath = obj.data.path.text
+              currentRelativePath = path.relative(dirPath, currentPath).replace(/\\/g, '/')
+              lines = []
+            } else if (obj.type === 'match') {
+              const lineText = obj.data.lines.text
+              lines.push({ line: lineText, lineNumber: obj.data.line_number, subMatches: obj.data.submatches })
+            } else if (obj.type === 'end') {
+              if (lines.length > 0) {
+                const firstMatch = lines[0]
+                const snippet = firstMatch.line.trim()
+                results.push({
+                  path: '/' + currentRelativePath,
+                  name: path.basename(currentRelativePath),
+                  rootPath: dirPath,
+                  rootName: dirName,
+                  matchedLine: snippet,
+                })
+              }
+            }
+          } catch {
+            // skip parse errors
+          }
+        }
+      } catch {
+        // skip directories where rg fails
+      }
+    }
+
+    return c.json({ results: results.slice(0, limit) })
   })
 
   router.get('/*', async (c) => {

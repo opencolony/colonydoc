@@ -1,40 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, X, ArrowLeft, FileText, Loader2 } from 'lucide-react'
-import { useSearch, SearchResult } from '@/client/hooks/useSearch'
 import { cn } from '@/client/lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
-interface FileNode {
-  name: string
+interface SearchResult {
   path: string
-  type: 'file' | 'directory'
-  children?: FileNode[]
+  name: string
+  rootPath: string
+  rootName: string
+  matchedLine?: string
 }
 
 interface SearchDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  files: FileNode[]
   onSelect: (path: string, rootPath?: string) => void
 }
 
-export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDialogProps) {
+export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [isSearching, setIsSearching] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const { buildIndex, search, isIndexing } = useSearch()
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
   }, [])
-
-  useEffect(() => {
-    if (!open) return
-    buildIndex(files)
-  }, [open, files, buildIndex])
 
   useEffect(() => {
     if (open) {
@@ -54,13 +48,19 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
     }
 
     const debounceTimer = setTimeout(() => {
-      const searchResults = search(query)
-      setResults(searchResults)
-      setSelectedIndex(0)
-    }, 150)
+      setIsSearching(true)
+      fetch(`/api/files/search?q=${encodeURIComponent(query)}&limit=50`)
+        .then(res => res.json())
+        .then(data => {
+          setResults(data.results || [])
+          setSelectedIndex(0)
+        })
+        .catch(console.error)
+        .finally(() => setIsSearching(false))
+    }, 200)
 
     return () => clearTimeout(debounceTimer)
-  }, [query, search])
+  }, [query])
 
   const handleSelect = useCallback((path: string, rootPath?: string) => {
     onSelect(path, rootPath)
@@ -134,21 +134,21 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {isIndexing && (
+        {isSearching && (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
             <Loader2 className="size-5 mr-2 animate-spin" />
-            <span className="text-sm">正在建立索引...</span>
+            <span className="text-sm">搜索中...</span>
           </div>
         )}
 
-        {!isIndexing && query && results.length === 0 && (
+        {!isSearching && query && results.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Search className="size-10 mb-3 opacity-50" />
             <span className="text-sm">未找到相关结果</span>
           </div>
         )}
 
-        {!isIndexing && !query && (
+        {!isSearching && !query && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Search className="size-10 mb-3 opacity-50" />
             <span className="text-sm">输入关键词搜索文件名或内容</span>
@@ -170,20 +170,15 @@ export function SearchDialog({ open, onOpenChange, files, onSelect }: SearchDial
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium truncate">{result.name}</span>
-                    {result.source === 'name' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                        文件名
-                      </span>
-                    )}
                     {result.rootName && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                         {result.rootName}
                       </span>
                     )}
                   </div>
-                  {result.matchedContent && (
+                  {result.matchedLine && (
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {result.matchedContent}
+                      {result.matchedLine}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1 truncate">

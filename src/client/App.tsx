@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef, memo } from 'react'
 import { Plus, Code, Eye, List, FileText, Folder, FolderOpen, Search, X, Settings, GripVertical, AlertCircle } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useFile } from './hooks/useFile'
-import { useSearch } from './hooks/useSearch'
 import { FileTree } from './components/FileTree'
 import { TipTapEditor } from './components/TipTapEditor'
 import { CreateFileModal } from './components/CreateFileModal'
@@ -276,8 +275,6 @@ function App() {
     },
   })
 
-  const { updateIndex, removeFromIndex } = useSearch()
-
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
@@ -402,23 +399,9 @@ function App() {
         setRefreshDialogOpen(true)
       }
 
-      if (data.event === 'unlink') {
-        removeFromIndex(changedPath)
-      } else {
-        fetch(`/api/files/content?paths=${encodeURIComponent(changedPath)}`)
-          .then(res => res.json())
-          .then(result => {
-            if (result.files && result.files[0]) {
-              const file = result.files[0]
-              updateIndex(file.path, file.name, file.content)
-            }
-          })
-          .catch(console.error)
-      }
-
       fetchFiles()
     }
-  }, [fetchFiles, path, updateIndex, removeFromIndex, activeDir]))
+  }, [fetchFiles, path, activeDir]))
 
   const handleSelectFile = useCallback((selectedPath: string, type: 'file' | 'directory', rootPath?: string) => {
     if (type === 'file') {
@@ -918,7 +901,6 @@ function App() {
       <SearchDialog
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
-        files={allFiles}
         onSelect={(path, rootPath) => {
           if (rootPath && activeDir !== rootPath) {
             setActiveDir(rootPath)
