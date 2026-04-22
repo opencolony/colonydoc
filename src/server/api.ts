@@ -126,7 +126,7 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
   return nodes
 }
 
-export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatcher) {
+export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatcher, env: 'development' | 'production' = 'production') {
   const router = new Hono()
 
   // Server-side file tree cache to avoid re-walking on every request
@@ -199,7 +199,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
         }
       }
 
-      saveConfig(config)
+      saveConfig(config, env)
       invalidateTreeCache()
 
       if (typeof updates.showHiddenFiles === 'boolean') {
@@ -247,7 +247,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
       const newDir: DirConfig = { path: path.resolve(newPath), exclude: body.exclude, name: body.name }
       config.dirs.push(newDir)
-      saveConfig(config)
+      saveConfig(config, env)
       invalidateTreeCache()
       return c.json({ success: true, dir: newDir })
     } catch (e) {
@@ -263,7 +263,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
     if (idx === -1) return c.json({ error: 'Dir not found' }, 404)
 
     config.dirs.splice(idx, 1)
-    saveConfig(config)
+    saveConfig(config, env)
     invalidateTreeCache()
     return c.json({ success: true })
   })
@@ -279,7 +279,7 @@ export function createFileRouter(config: ColonynoteConfig, matcher: IgnoreMatche
 
       if (exclude !== undefined) dir.exclude = exclude
       if (name !== undefined) dir.name = name
-      saveConfig(config)
+      saveConfig(config, env)
       invalidateTreeCache()
       return c.json({ success: true, dir })
     } catch (e) {

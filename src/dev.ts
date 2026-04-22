@@ -37,7 +37,7 @@ async function main() {
     }
   }
 
-  const config = await loadConfig()
+  const config = await loadConfig('development')
 
   if (cliDirs.length > 0) {
     for (const rootPath of cliDirs) {
@@ -58,7 +58,7 @@ async function main() {
   const app = new Hono()
   app.use('*', cors())
 
-  const fileRouter = createFileRouter(config, matcher)
+  const fileRouter = createFileRouter(config, matcher, 'development')
   app.route('/api/files', fileRouter)
 
   const clients = new Set<WebSocket>()

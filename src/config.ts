@@ -86,42 +86,26 @@ const defaultConfig: ColonynoteConfig = {
   },
 }
 
-export async function loadConfig(): Promise<ColonynoteConfig> {
+export async function loadConfig(env: 'development' | 'production' = 'production'): Promise<ColonynoteConfig> {
   const config = { ...defaultConfig }
   const homeDir = os.homedir()
   const colonynoteDir = path.join(homeDir, '.colonynote')
-  const configPath = path.join(colonynoteDir, 'config.json')
 
-  if (fs.existsSync(configPath)) {
-    try {
-      const content = fs.readFileSync(configPath, 'utf-8')
-      const userConfig = JSON.parse(content)
+  // 开发环境优先加载 config.dev.json，否则加载 config.json
+  const configFileName = env === 'development' ? 'config.dev.json' : 'config.json'
+  const configPath = path.join(colonynoteDir, configFileName)
 
-      // Merge user config, filtering out invalid fields
-      const validFields = ['dirs', 'showHiddenFiles', 'allowedExtensions', 'theme', 'editor', 'ignore']
-      for (const field of validFields) {
-        if (field in userConfig) {
-          if (field === 'dirs' && Array.isArray(userConfig.dirs)) {
-            config.dirs = userConfig.dirs
-          } else if (field === 'showHiddenFiles' && typeof userConfig.showHiddenFiles === 'boolean') {
-            config.showHiddenFiles = userConfig.showHiddenFiles
-          } else if (field === 'allowedExtensions' && Array.isArray(userConfig.allowedExtensions)) {
-            config.allowedExtensions = userConfig.allowedExtensions
-          } else if (field === 'theme' && typeof userConfig.theme === 'object') {
-            config.theme = { ...defaultConfig.theme, ...userConfig.theme }
-          } else if (field === 'editor' && typeof userConfig.editor === 'object') {
-            config.editor = { ...defaultConfig.editor, ...userConfig.editor }
-          } else if (field === 'ignore' && typeof userConfig.ignore === 'object') {
-            config.ignore = { ...defaultConfig.ignore, ...userConfig.ignore }
-          }
-        }
-      }
-
-      saveConfig(config)
-    } catch (e) {
-      console.warn(`Failed to load config from ${configPath}:`, e)
-      console.log('Using default configuration')
+  // 生产环境回退逻辑：如果 config.json 不存在，尝试加载 config.dev.json 作为 fallback
+  if (!fs.existsSync(configPath) && env === 'production') {
+    const devConfigPath = path.join(colonynoteDir, 'config.dev.json')
+    if (fs.existsSync(devConfigPath)) {
+      console.log('Production config not found, falling back to dev config')
+      loadConfigFile(devConfigPath, config)
     }
+  } else if (fs.existsSync(configPath)) {
+    loadConfigFile(configPath, config)
+  } else if (env === 'development') {
+    console.log(`No dev config found at ${configPath}, using default configuration`)
   }
 
   // Resolve all paths to absolute paths
@@ -143,10 +127,41 @@ export async function loadConfig(): Promise<ColonynoteConfig> {
   return config
 }
 
-export function saveConfig(config: ColonynoteConfig): void {
+function loadConfigFile(configPath: string, config: ColonynoteConfig): void {
+  try {
+    const content = fs.readFileSync(configPath, 'utf-8')
+    const userConfig = JSON.parse(content)
+
+    // Merge user config, filtering out invalid fields
+    const validFields = ['dirs', 'showHiddenFiles', 'allowedExtensions', 'theme', 'editor', 'ignore']
+    for (const field of validFields) {
+      if (field in userConfig) {
+        if (field === 'dirs' && Array.isArray(userConfig.dirs)) {
+          config.dirs = userConfig.dirs
+        } else if (field === 'showHiddenFiles' && typeof userConfig.showHiddenFiles === 'boolean') {
+          config.showHiddenFiles = userConfig.showHiddenFiles
+        } else if (field === 'allowedExtensions' && Array.isArray(userConfig.allowedExtensions)) {
+          config.allowedExtensions = userConfig.allowedExtensions
+        } else if (field === 'theme' && typeof userConfig.theme === 'object') {
+          config.theme = { ...defaultConfig.theme, ...userConfig.theme }
+        } else if (field === 'editor' && typeof userConfig.editor === 'object') {
+          config.editor = { ...defaultConfig.editor, ...userConfig.editor }
+        } else if (field === 'ignore' && typeof userConfig.ignore === 'object') {
+          config.ignore = { ...defaultConfig.ignore, ...userConfig.ignore }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(`Failed to load config from ${configPath}:`, e)
+    console.log('Using default configuration')
+  }
+}
+
+export function saveConfig(config: ColonynoteConfig, env: 'development' | 'production' = 'production'): void {
   const homeDir = os.homedir()
   const colonynoteDir = path.join(homeDir, '.colonynote')
-  const configPath = path.join(colonynoteDir, 'config.json')
+  const configFileName = env === 'development' ? 'config.dev.json' : 'config.json'
+  const configPath = path.join(colonynoteDir, configFileName)
   try {
     if (!fs.existsSync(colonynoteDir)) {
       fs.mkdirSync(colonynoteDir, { recursive: true })
