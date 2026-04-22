@@ -1,8 +1,6 @@
 import { useState, useMemo, memo, useEffect, useRef, useCallback } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { Code, Eye, ZoomIn, ZoomOut, RotateCcw, X } from 'lucide-react'
-import { ScrollArea } from '@/client/components/ui/scroll-area'
-import { Button } from '@/client/components/ui/button'
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, X } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import mermaid from 'mermaid'
 
@@ -18,6 +16,7 @@ interface MermaidFullscreenDialogProps {
   source: string
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSourceChange?: (source: string) => void
 }
 
 const MermaidChart = memo(function MermaidChart({
@@ -42,8 +41,8 @@ const MermaidChart = memo(function MermaidChart({
   )
 })
 
-export function MermaidFullscreenDialog({ source, open, onOpenChange }: MermaidFullscreenDialogProps) {
-  const [showSource, setShowSource] = useState(false)
+export function MermaidFullscreenDialog({ source, open, onOpenChange, onSourceChange }: MermaidFullscreenDialogProps) {
+  const [isSourceMode, setIsSourceMode] = useState(false)
   const [svgContent, setSvgContent] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -58,42 +57,49 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange }: MermaidF
 
   const containerRef = useRef<HTMLDivElement>(null)
   const mermaidIdRef = useRef(`mermaid-fullscreen-${Math.random().toString(36).substr(2, 9)}`)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const isSourceModeRef = useRef(isSourceMode)
+  isSourceModeRef.current = isSourceMode
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 取消正在进行的防抖渲染，重置 isLoading
+  const cancelTimeout = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+    }
+    setIsLoading(false)
+  }, [])
 
   useEffect(() => {
-    if (!open || !source) return
-
-    let cancelled = false
-    setIsLoading(true)
-    setError('')
+    if (!open) return
     setScale(1)
     setPosition({ x: 0, y: 0 })
-
-    // Update mermaid theme based on current mode
+    setIsLoading(true)
+    setError('')
+    // 对话框打开时立即渲染
     const currentTheme = isDarkMode() ? 'dark' : 'default'
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: currentTheme,
-      suppressErrorRendering: true,
-    })
-
+    mermaid.initialize({ startOnLoad: false, theme: currentTheme, suppressErrorRendering: true })
+    mermaidIdRef.current = `mermaid-fullscreen-${Math.random().toString(36).substr(2, 9)}`
     mermaid.render(mermaidIdRef.current, source)
-      .then(({ svg }) => {
-        if (!cancelled) {
-          setSvgContent(svg)
-          setIsLoading(false)
-        }
-      })
-      .catch((err: any) => {
-        if (!cancelled) {
-          setError(err.message || 'Mermaid render error')
-          setIsLoading(false)
-        }
-      })
+      .then(({ svg }) => { setSvgContent(svg); setIsLoading(false) })
+      .catch((err: any) => { setError(err.message || 'Mermaid render error'); setIsLoading(false) })
+  }, [open])
 
-    return () => {
-      cancelled = true
-    }
-  }, [open, source])
+  // 源码模式下停止输入后自动重新渲染
+  useEffect(() => {
+    if (!isSourceMode) return
+    cancelTimeout()
+    debounceTimerRef.current = setTimeout(() => {
+      const currentSource = textareaRef.current?.value ?? source
+      setIsLoading(true)
+      mermaidIdRef.current = `mermaid-fullscreen-${Math.random().toString(36).substr(2, 9)}`
+      mermaid.render(mermaidIdRef.current, currentSource)
+        .then(({ svg }) => { setSvgContent(svg); setIsLoading(false) })
+        .catch((err: any) => { setError(err.message || 'Mermaid render error'); setIsLoading(false) })
+    }, 800)
+    return () => cancelTimeout()
+  }, [isSourceMode, source, cancelTimeout])
 
   const getDistance = (touches: React.TouchList) => {
     const dx = touches[0].clientX - touches[1].clientX
@@ -212,15 +218,44 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange }: MermaidF
           <DialogPrimitive.Title className="sr-only">Mermaid 图表全屏预览</DialogPrimitive.Title>
           <div className="mermaid-fullscreen-header">
             <div className="mermaid-fullscreen-controls">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSource(!showSource)}
-                className="gap-2"
+              <button
+                type="button"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={() => {
+                  if (isSourceModeRef.current) {
+                    // 从源码视图切换回渲染视图时，从 textarea 读取当前值
+                    cancelTimeout()
+                    const currentSource = textareaRef.current?.value ?? source
+                    setIsLoading(true)
+                    setError('')
+                    mermaidIdRef.current = `mermaid-fullscreen-${Math.random().toString(36).substr(2, 9)}`
+                    const currentTheme = isDarkMode() ? 'dark' : 'default'
+                    mermaid.initialize({
+                      startOnLoad: false,
+                      theme: currentTheme,
+                      suppressErrorRendering: true,
+                    })
+                    mermaid.render(mermaidIdRef.current, currentSource)
+                      .then(({ svg }) => {
+                        setSvgContent(svg)
+                        setIsLoading(false)
+                        if (currentSource !== source) {
+                          onSourceChange?.(currentSource)
+                        }
+                      })
+                      .catch((err: any) => {
+                        setError(err.message || 'Mermaid render error')
+                        setIsLoading(false)
+                      })
+                    setIsSourceMode(false)
+                  } else {
+                    setIsSourceMode(true)
+                  }
+                }}
               >
-                {showSource ? <Eye className="size-4" /> : <Code className="size-4" />}
-                {showSource ? '隐藏源码' : '显示源码'}
-              </Button>
+                {isSourceMode ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                {isSourceMode ? '预览图表' : '查看源码'}
+              </button>
             </div>
             <DialogPrimitive.Close className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
               <X className="size-4" />
@@ -274,13 +309,27 @@ export function MermaidFullscreenDialog({ source, open, onOpenChange }: MermaidF
               </div>
             </div>
 
-            {showSource && (
-              <div className="mermaid-fullscreen-source-panel">
-                <ScrollArea className="h-full">
-                  <pre className="mermaid-fullscreen-source-code">
-                    {source}
-                  </pre>
-                </ScrollArea>
+            {isSourceMode && (
+              <div className="mermaid-fullscreen-source-panel source-edit-mode">
+                <textarea
+                  key={source}
+                  ref={textareaRef}
+                  defaultValue={source}
+                  className="mermaid-fullscreen-source-editor"
+                  spellCheck={false}
+                  onChange={() => {
+                    // 每次输入都取消上一次的防抖，重新计时
+                    cancelTimeout()
+                    debounceTimerRef.current = setTimeout(() => {
+                      const currentSource = textareaRef.current?.value ?? ''
+                      setIsLoading(true)
+                      mermaidIdRef.current = `mermaid-fullscreen-${Math.random().toString(36).substr(2, 9)}`
+                      mermaid.render(mermaidIdRef.current, currentSource)
+                        .then(({ svg }) => { setSvgContent(svg); setIsLoading(false) })
+                        .catch((err: any) => { setError(err.message || 'Mermaid render error'); setIsLoading(false) })
+                    }, 800)
+                  }}
+                />
               </div>
             )}
           </div>

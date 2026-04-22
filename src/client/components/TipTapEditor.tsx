@@ -42,7 +42,7 @@ interface TipTapEditorProps {
   onLinkClick?: (path: string) => void
 }
 
-function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
+function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: NodeViewProps) {
   const isMermaid = node.attrs.language === 'mermaid'
   const [svgContent, setSvgContent] = useState<string>('')
   const [error, setError] = useState<string>('')
@@ -161,6 +161,16 @@ function MermaidCodeBlock({ node, updateAttributes, selected }: NodeViewProps) {
           source={mermaidSource}
           open={isFullscreen}
           onOpenChange={(open) => setIsFullscreen(open)}
+          onSourceChange={(newSource) => {
+            const pos = typeof getPos === 'function' ? getPos() : getPos
+            if (pos == null) return
+            editor.commands.command(({ tr }) => {
+              const nodeStart = pos + 1
+              const nodeEnd = nodeStart + newSource.length
+              tr.replaceWith(nodeStart, nodeEnd, tr.doc.type.schema.text(newSource))
+              return true
+            })
+          }}
         />
       )}
     </NodeViewWrapper>
