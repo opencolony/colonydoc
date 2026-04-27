@@ -3,7 +3,7 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { createFileRouter } from '../dist/server/api.js'
+import { createFileRouter, createMutableConfigHolder } from '../dist/server/api.js'
 import { loadConfig, DEFAULT_PORT, DEFAULT_HOST } from '../dist/config.js'
 import { setupWatcher } from '../dist/server/watcher.js'
 import { IgnoreMatcher } from '../dist/server/ignore.js'
@@ -53,15 +53,14 @@ async function main() {
   const host = options.host
 
   const matcher = new IgnoreMatcher(config.dirs.map(d => d.path), {
-    enableIgnoreFiles: config.ignore.enableIgnoreFiles,
-    ignoreFileNames: config.ignore.ignoreFileNames,
     globalPatterns: config.ignore.patterns,
   })
 
   const app = new Hono()
   app.use('*', cors())
 
-  const fileRouter = createFileRouter(config, matcher)
+  const holder = createMutableConfigHolder(config, matcher)
+  const fileRouter = createFileRouter(holder)
   app.route('/api/files', fileRouter)
 
   const publicDir = join(dirname(fileURLToPath(import.meta.url)), '../dist/client')
