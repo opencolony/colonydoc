@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ChevronRight, Folder, FolderOpen, File, FileText, X } from 'lucide-react'
+import { ChevronRight, Folder, FolderOpen, FileText, X } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import {
   Dialog,

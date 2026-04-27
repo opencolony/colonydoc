@@ -22,7 +22,7 @@ import { Maximize2 } from 'lucide-react'
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
 import { EditorToolbar } from './EditorToolbar'
 import { FrontmatterPanel } from './FrontmatterPanel'
-import { extractFrontmatter, parseFrontmatterData, type FrontmatterStorage } from '../extensions/frontmatter'
+import { extractFrontmatter } from '../extensions/frontmatter'
 
 const isDarkMode = () => document.documentElement.classList.contains('dark')
 

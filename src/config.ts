@@ -178,5 +178,3 @@ export function saveConfig(config: ColonynoteConfig, env: 'development' | 'produ
     throw e
   }
 }
-
-export { defaultConfig }
