@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { OpenTab } from '../lib/tabTypes'
 
 interface UseTabsOptions {
@@ -8,6 +8,7 @@ interface UseTabsOptions {
 }
 
 const SAVE_IGNORE_BUFFER_MS = 5000
+const PERSISTENCE_KEY = 'colonynote:tabs'
 
 function makeTabKey(path: string, rootPath: string | null): string {
   return rootPath ? `${rootPath}::${path}` : path
@@ -316,6 +317,105 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
 
     fetchFiles()
   }, [bump])
+
+  // --- Persistence: restore on mount ---
+  const hasRestoredRef = useRef(false)
+  const isRestoringRef = useRef(false)
+
+  useEffect(() => {
+    if (hasRestoredRef.current) return
+    hasRestoredRef.current = true
+    isRestoringRef.current = true
+
+    try {
+      const raw = localStorage.getItem(PERSISTENCE_KEY)
+      if (!raw) {
+        isRestoringRef.current = false
+        return
+      }
+
+      const data = JSON.parse(raw) as { tabOrder: string[], activeTabPath: string | null }
+      if (!data.tabOrder?.length) {
+        isRestoringRef.current = false
+        return
+      }
+
+      const restoredKeys: string[] = []
+      for (const key of data.tabOrder) {
+        // Parse key: rootPath::filePath or filePath
+        const parts = key.split('::')
+        let path: string
+        let rootPath: string | null
+        if (parts.length >= 2) {
+          rootPath = parts[0]
+          path = parts.slice(1).join('::')
+        } else {
+          rootPath = null
+          path = key
+        }
+
+        const tabKey = makeTabKey(path, rootPath)
+        if (!tabsRef.current.has(tabKey)) {
+          tabsRef.current.set(tabKey, makeTab(path, rootPath))
+
+          // Fetch content silently
+          const url = rootPath
+            ? `/api/files${path}?root=${encodeURIComponent(rootPath)}`
+            : `/api/files${path}`
+          fetch(url)
+            .then(res => {
+              if (!res.ok) throw new Error('Failed to load file')
+              return res.text()
+            })
+            .then(text => {
+              const tab = tabsRef.current.get(tabKey)
+              if (tab) {
+                tabsRef.current.set(tabKey, { ...tab, content: text, lastSavedContent: text })
+                bump()
+              }
+            })
+            .catch(() => {})
+        }
+        restoredKeys.push(tabKey)
+      }
+
+      setTabOrder(restoredKeys)
+
+      if (data.activeTabPath && tabsRef.current.has(data.activeTabPath)) {
+        setActiveTabPath(data.activeTabPath)
+        const activeTab = tabsRef.current.get(data.activeTabPath)
+        if (activeTab?.rootPath) {
+          window.location.hash = `${activeTab.rootPath}:${activeTab.path}`
+        } else if (activeTab) {
+          window.location.hash = activeTab.path
+        }
+      }
+
+      bump()
+    } catch (e) {
+      console.error('Failed to restore tabs:', e)
+    } finally {
+      isRestoringRef.current = false
+    }
+  }, [makeTab, bump])
+
+  // --- Persistence: save on change ---
+  useEffect(() => {
+    if (isRestoringRef.current) return
+
+    try {
+      if (tabOrder.length === 0) {
+        localStorage.removeItem(PERSISTENCE_KEY)
+      } else {
+        localStorage.setItem(PERSISTENCE_KEY, JSON.stringify({
+          tabOrder,
+          activeTabPath,
+        }))
+      }
+    } catch (e) {
+      console.error('Failed to persist tabs:', e)
+    }
+  }, [tabOrder, activeTabPath])
 
   return {
     tabs: tabsRef.current,
