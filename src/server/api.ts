@@ -26,7 +26,10 @@ interface FileNode {
 
 function isAllowed(pathStr: string, config: ColonynoteConfig): boolean {
   const resolved = path.resolve(pathStr)
-  return config.dirs.some(dir => resolved.startsWith(path.resolve(dir.path)))
+  return config.dirs.some(dir => {
+    const dirPath = path.resolve(dir.path)
+    return resolved === dirPath || resolved.startsWith(dirPath + path.sep)
+  })
 }
 
 function validateRoot(dirPath: string, config: ColonynoteConfig): string | null {

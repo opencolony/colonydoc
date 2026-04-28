@@ -18,6 +18,7 @@ interface FileItem {
   path: string
   name: string
   type: 'file' | 'directory'
+  rootPath: string
   childrenCount?: number
 }
 
@@ -27,7 +28,7 @@ interface FileItemMenuProps {
   onRenameRequest: (item: FileItem) => void
   onMoveRequest: (item: FileItem) => void
   onCopyRequest?: (item: FileItem) => void
-  onDelete: (path: string) => void
+  onDelete: (path: string, rootPath: string) => void
   onCreateRequest?: (isDirectory: boolean, parentPath: string) => void
 }
 
@@ -61,7 +62,7 @@ export function FileItemMenu({ item, currentDir, onRenameRequest, onMoveRequest,
 
   const handleConfirmDelete = () => {
     if (item) {
-      onDelete(item.path)
+      onDelete(item.path, item.rootPath)
     }
     setDeleteDialogOpen(false)
     handleClose()

@@ -50,10 +50,10 @@ interface SidebarContentProps {
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory', rootPath?: string) => void
-  onDelete: (path: string) => void
-  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
-  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
-  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onDelete: (path: string, rootPath: string) => void
+  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
+  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
+  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
@@ -200,9 +200,9 @@ function App() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [moveModalOpen, setMoveModalOpen] = useState(false)
   const [copyModalOpen, setCopyModalOpen] = useState(false)
-  const [renameItem, setRenameItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
-  const [moveItem, setMoveItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
-  const [copyItem, setCopyItem] = useState<{ path: string; name: string; type: 'file' | 'directory' } | null>(null)
+  const [renameItem, setRenameItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; rootPath: string } | null>(null)
+  const [moveItem, setMoveItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; rootPath: string } | null>(null)
+  const [copyItem, setCopyItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; rootPath: string } | null>(null)
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
@@ -524,15 +524,13 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [openTab])
 
-  const handleDeleteFile = useCallback(async (filePath: string) => {
+  const handleDeleteFile = useCallback(async (filePath: string, rootPath: string) => {
     try {
-      const url = activeDir
-        ? `/api/files${filePath}?root=${encodeURIComponent(activeDir)}`
-        : `/api/files${filePath}`
+      const url = `/api/files${filePath}?root=${encodeURIComponent(rootPath)}`
       await fetch(url, { method: 'DELETE' })
-      // Close any open tabs for this file path (across all roots)
+      // Close any open tabs for this file path in the same root
       for (const [key, tab] of tabs) {
-        if (tab.path === filePath) {
+        if (tab.path === filePath && tab.rootPath === rootPath) {
           closeTab(key)
         }
       }
@@ -540,9 +538,9 @@ function App() {
     } catch (e) {
       console.error('Failed to delete:', e)
     }
-  }, [fetchFiles, tabs, closeTab, activeDir])
+  }, [fetchFiles, tabs, closeTab])
 
-  const handleRename = useCallback(async (filePath: string, newName: string) => {
+  const handleRename = useCallback(async (filePath: string, newName: string, rootPath: string) => {
     try {
       const parentPath = filePath.substring(0, filePath.lastIndexOf('/'))
       const oldName = filePath.split('/').pop() || ''
@@ -558,15 +556,15 @@ function App() {
           oldPath,
           newPath,
           isDirectory,
-          sourceRoot: activeDir,
-          targetRoot: activeDir,
+          sourceRoot: rootPath,
+          targetRoot: rootPath,
         }),
       })
 
       // If the renamed file is open, close old tab and open new one
       const tabKeyToRename = (() => {
         for (const [key, tab] of tabs) {
-          if (tab.path === filePath && tab.rootPath === activeDir) return key
+          if (tab.path === filePath && tab.rootPath === rootPath) return key
         }
         return null
       })()
@@ -574,14 +572,14 @@ function App() {
         const wasActive = activeTabPath === tabKeyToRename
         closeTab(tabKeyToRename)
         if (wasActive) {
-          openTab(newPath, activeDir)
+          openTab(newPath, rootPath)
         }
       }
       fetchFiles()
     } catch (e) {
       console.error('Failed to rename:', e)
     }
-  }, [tabs, activeTabPath, closeTab, openTab, fetchFiles, activeDir])
+  }, [tabs, activeTabPath, closeTab, openTab, fetchFiles])
 
   const handleMove = useCallback(async (oldPath: string, newPath: string, sourceRoot: string, targetRoot: string) => {
     try {
@@ -970,10 +968,10 @@ function App() {
         open={renameDialogOpen}
         onOpenChange={setRenameDialogOpen}
         item={renameItem}
-        onRename={(oldPath, newName) => {
+        onRename={(oldPath, newName, rootPath) => {
           setRenameItem(null)
           setRenameDialogOpen(false)
-          handleRename(oldPath, newName)
+          handleRename(oldPath, newName, rootPath)
         }}
       />
 

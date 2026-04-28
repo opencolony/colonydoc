@@ -16,12 +16,13 @@ function collect(value: string, previous: string[]) {
 }
 
 function findDirForPath(filePath: string, config: ColonynoteConfig): string {
-  for (const dir of config.dirs) {
-    if (filePath.startsWith(dir.path)) {
-      return dir.path
-    }
-  }
-  return config.dirs[0]?.path || ''
+  const matches = config.dirs.filter((dir) => {
+    const d = path.normalize(dir.path)
+    const f = path.normalize(filePath)
+    return f === d || f.startsWith(d + path.sep)
+  })
+  const best = matches.sort((a, b) => b.path.length - a.path.length)[0]
+  return best?.path || config.dirs[0]?.path || ''
 }
 
 async function main() {

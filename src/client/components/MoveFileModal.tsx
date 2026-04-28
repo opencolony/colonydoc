@@ -28,7 +28,7 @@ interface FileGroup {
 interface MoveFileModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  item: { path: string; name: string; type: 'file' | 'directory' } | null
+  item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string } | null
   groups: FileGroup[]
   onMove: (oldPath: string, newParentPath: string, sourceRoot: string, targetRoot: string) => void
 }
@@ -129,13 +129,10 @@ export function MoveFileModal({
     if (item && open) {
       const parentPath = item.path.substring(0, item.path.lastIndexOf('/'))
       setSelectedPath(parentPath || '/')
-      // item.path is a relative path (e.g., "/readme.md"), find which group contains this file
-      const itemGroup = groups.find(g => g.files.some(f => f.path === item.path))
-      const itemRootPath = itemGroup?.root.path || groups[0]?.root.path || null
-      setSelectedRoot(itemRootPath)
-      setSourceRoot(itemRootPath)
+      setSelectedRoot(item.rootPath)
+      setSourceRoot(item.rootPath)
     }
-  }, [item, open, groups])
+  }, [item, open])
 
   const handleToggleExpand = (path: string) => {
     setExpandedPaths((prev) => {

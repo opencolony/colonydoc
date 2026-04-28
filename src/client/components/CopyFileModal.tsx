@@ -28,7 +28,7 @@ interface FileGroup {
 interface CopyFileModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  item: { path: string; name: string; type: 'file' | 'directory' } | null
+  item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string } | null
   groups: FileGroup[]
   onCopy: (sourcePath: string, targetPath: string, sourceRoot: string, targetRoot: string) => void
 }
@@ -129,23 +129,10 @@ export function CopyFileModal({
     if (item && open) {
       const parentPath = item.path.substring(0, item.path.lastIndexOf('/'))
       setSelectedPath(parentPath || '/')
-      // item.path is a relative path (e.g., "/readme.md"), find which group contains this file
-      // Need to recursively search through nested children since files is a tree structure
-      const findFileInTree = (files: FileNode[], targetPath: string): boolean => {
-        return files.some(f => {
-          if (f.path === targetPath) return true
-          if (f.children && f.children.length > 0) {
-            return findFileInTree(f.children, targetPath)
-          }
-          return false
-        })
-      }
-      const itemGroup = groups.find(g => findFileInTree(g.files, item.path))
-      const itemRootPath = itemGroup?.root.path || groups[0]?.root.path || null
-      setSelectedRoot(itemRootPath)
-      setSourceRoot(itemRootPath)
+      setSelectedRoot(item.rootPath)
+      setSourceRoot(item.rootPath)
     }
-  }, [item, open, groups])
+  }, [item, open])
 
   const handleToggleExpand = (path: string) => {
     setExpandedPaths((prev) => {

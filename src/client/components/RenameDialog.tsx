@@ -14,8 +14,8 @@ import { Button } from './ui/button'
 interface RenameDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  item: { path: string; name: string; type: 'file' | 'directory' } | null
-  onRename: (oldPath: string, newName: string) => void
+  item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string } | null
+  onRename: (oldPath: string, newName: string, rootPath: string) => void
 }
 
 export function RenameDialog({ open, onOpenChange, item, onRename }: RenameDialogProps) {
@@ -29,7 +29,7 @@ export function RenameDialog({ open, onOpenChange, item, onRename }: RenameDialo
 
   const handleSubmit = () => {
     if (item && name.trim()) {
-      onRename(item.path, name.trim())
+      onRename(item.path, name.trim(), item.rootPath)
       onOpenChange(false)
     }
   }

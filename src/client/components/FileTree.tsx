@@ -41,10 +41,10 @@ interface FileTreeProps {
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<React.SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory', rootPath?: string) => void
-  onDelete: (path: string) => void
-  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
-  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
-  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onDelete: (path: string, rootPath: string) => void
+  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
+  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
+  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
@@ -59,10 +59,10 @@ const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setEx
   expandedPaths: Set<string>
   setExpandedPaths: React.Dispatch<SetStateAction<Set<string>>>
   onSelect: (path: string, type: 'file' | 'directory', rootPath?: string) => void
-  onDelete: (path: string) => void
-  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
-  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
-  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory' }) => void
+  onDelete: (path: string, rootPath: string) => void
+  onRenameRequest: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
+  onMoveRequest: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
+  onCopyRequest?: (item: { path: string; name: string; type: 'file' | 'directory'; rootPath: string }) => void
   onExpand?: (path: string) => void
   editingType?: 'file' | 'directory' | null
   onEditingChange?: (type: 'file' | 'directory' | null) => void
@@ -72,7 +72,7 @@ const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setEx
   activeRoot: string | null
 }) {
   const [editName, setEditName] = useState('')
-  const [menuItem, setMenuItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; childrenCount?: number } | null>(null)
+  const [menuItem, setMenuItem] = useState<{ path: string; name: string; type: 'file' | 'directory'; rootPath: string; childrenCount?: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isDirectory = node.type === 'directory'
   const isActive = node.path === activePath && node.rootPath === activeRoot
@@ -119,7 +119,7 @@ const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setEx
             data-sidebar="menu-action"
             onClick={(e) => {
               e.stopPropagation()
-              setMenuItem({ path: node.path, name: node.name, type: 'file' })
+              setMenuItem({ path: node.path, name: node.name, type: 'file', rootPath: node.rootPath })
             }}
             className="sidebar-menu-item-action absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-accent z-10"
           >
@@ -172,7 +172,7 @@ const TreeNode = memo(function TreeNode({ node, activePath, expandedPaths, setEx
           </CollapsibleTrigger>
           <button
               data-sidebar="menu-action"
-              onClick={() => setMenuItem({ path: node.path, name: node.name, type: 'directory', childrenCount })}
+              onClick={() => setMenuItem({ path: node.path, name: node.name, type: 'directory', rootPath: node.rootPath, childrenCount })}
               className="sidebar-menu-item-action absolute right-1 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-md hover:bg-accent z-10"
             >
               <MoreHorizontal className="size-3.5" />

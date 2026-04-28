@@ -1,10 +1,17 @@
 import chokidar from 'chokidar'
 import fs from 'fs'
+import path from 'path'
 import type { ColonynoteConfig } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
 
 export interface WatcherCallbacks {
   onFileChange: (rootPath: string, event: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir', path: string) => void
+}
+
+function isPathUnderRoot(filePath: string, rootPath: string): boolean {
+  const normalizedFile = path.normalize(filePath)
+  const normalizedRoot = path.normalize(rootPath)
+  return normalizedFile === normalizedRoot || normalizedFile.startsWith(normalizedRoot + path.sep)
 }
 
 export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, callbacks: WatcherCallbacks) {
@@ -32,36 +39,41 @@ export function setupWatcher(config: ColonynoteConfig, matcher: IgnoreMatcher, c
   })
 
   watcher
-    .on('add', (path) => {
-      if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+    .on('add', (filePath) => {
+      if (config.allowedExtensions.some(ext => filePath.endsWith(ext))) {
+        const matchingRoots = config.dirs.filter(r => isPathUnderRoot(filePath, r.path))
+        const matchingRoot = matchingRoots.sort((a, b) => b.path.length - a.path.length)[0]
         const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
-        callbacks.onFileChange(rootPath, 'add', path)
+        callbacks.onFileChange(rootPath, 'add', filePath)
       }
     })
-    .on('change', (path) => {
-      if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+    .on('change', (filePath) => {
+      if (config.allowedExtensions.some(ext => filePath.endsWith(ext))) {
+        const matchingRoots = config.dirs.filter(r => isPathUnderRoot(filePath, r.path))
+        const matchingRoot = matchingRoots.sort((a, b) => b.path.length - a.path.length)[0]
         const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
-        callbacks.onFileChange(rootPath, 'change', path)
+        callbacks.onFileChange(rootPath, 'change', filePath)
       }
     })
-    .on('unlink', (path) => {
-      if (config.allowedExtensions.some(ext => path.endsWith(ext))) {
-        const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+    .on('unlink', (filePath) => {
+      if (config.allowedExtensions.some(ext => filePath.endsWith(ext))) {
+        const matchingRoots = config.dirs.filter(r => isPathUnderRoot(filePath, r.path))
+        const matchingRoot = matchingRoots.sort((a, b) => b.path.length - a.path.length)[0]
         const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
-        callbacks.onFileChange(rootPath, 'unlink', path)
+        callbacks.onFileChange(rootPath, 'unlink', filePath)
       }
     })
-    .on('addDir', (path) => {
-      const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+    .on('addDir', (filePath) => {
+      const matchingRoots = config.dirs.filter(r => isPathUnderRoot(filePath, r.path))
+      const matchingRoot = matchingRoots.sort((a, b) => b.path.length - a.path.length)[0]
       const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
-      callbacks.onFileChange(rootPath, 'addDir', path)
+      callbacks.onFileChange(rootPath, 'addDir', filePath)
     })
-    .on('unlinkDir', (path) => {
-      const matchingRoot = config.dirs.find(r => path.startsWith(r.path))
+    .on('unlinkDir', (filePath) => {
+      const matchingRoots = config.dirs.filter(r => isPathUnderRoot(filePath, r.path))
+      const matchingRoot = matchingRoots.sort((a, b) => b.path.length - a.path.length)[0]
       const rootPath = matchingRoot?.path || config.dirs[0]?.path || ''
-      callbacks.onFileChange(rootPath, 'unlinkDir', path)
+      callbacks.onFileChange(rootPath, 'unlinkDir', filePath)
     })
     .on('error', (error) => console.error('Watcher error:', error))
 
