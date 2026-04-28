@@ -16,21 +16,13 @@ import { Underline } from '@tiptap/extension-underline'
 import { Typography } from '@tiptap/extension-typography'
 import { common, createLowlight } from 'lowlight'
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
-import mermaid from 'mermaid'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { Maximize2, Copy, Check } from 'lucide-react'
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog'
 import { EditorToolbar } from './EditorToolbar'
 import { FrontmatterPanel } from './FrontmatterPanel'
 import { extractFrontmatter } from '../extensions/frontmatter'
-
-const isDarkMode = () => document.documentElement.classList.contains('dark')
-
-mermaid.initialize({
-  startOnLoad: false,
-  theme: isDarkMode() ? 'dark' : 'default',
-  suppressErrorRendering: true,
-})
+import { mermaidQueue } from '../lib/mermaidQueue'
 
 const lowlight = createLowlight(common)
 
@@ -52,6 +44,10 @@ function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: 
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [themeKey, setThemeKey] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const mermaidIdRef = useRef(`mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
 
   const handleCopy = useCallback(async () => {
     const text = node.textContent
@@ -72,10 +68,10 @@ function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: 
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }, [node.textContent])
-  
-  const mermaidId = useMemo(() => `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, [themeKey])
+
   const mermaidSource = node.textContent
 
+  // 监听主题变化
   useEffect(() => {
     const handleThemeChange = () => {
       setThemeKey(prev => prev + 1)
@@ -84,50 +80,66 @@ function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: 
     return () => window.removeEventListener('theme-change', handleThemeChange)
   }, [])
 
+  // Intersection Observer：检测图表是否进入视口
+  useEffect(() => {
+    if (!isMermaid) return
+    const el = previewRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting)
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [isMermaid])
+
+  // 通过渲染队列请求渲染
   useEffect(() => {
     if (!isMermaid) {
       setSvgContent('')
       setError('')
+      setIsLoading(false)
       return
     }
 
     if (!mermaidSource) {
       setSvgContent('')
       setError('')
+      setIsLoading(false)
       return
     }
 
-    let cancelled = false
-
-    const updateMermaidTheme = () => {
-      const currentTheme = isDarkMode() ? 'dark' : 'default'
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: currentTheme,
-        suppressErrorRendering: true,
-      })
+    if (!isVisible) {
+      // 不可见时清空结果（但保留已渲染的内容以优化滚动体验）
+      // 如果已经渲染过，保留结果避免闪烁
+      if (!svgContent) {
+        setIsLoading(false)
+      }
+      return
     }
 
-    updateMermaidTheme()
-    
-    mermaid.render(mermaidId, mermaidSource)
-      .then(({ svg }) => {
-        if (!cancelled) {
-          setSvgContent(svg)
-          setError('')
-        }
-      })
-      .catch((err: any) => {
-        if (!cancelled) {
-          setError(err.message || 'Mermaid render error')
-          setSvgContent('')
-        }
-      })
+    const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'default'
+    setIsLoading(true)
+    mermaidIdRef.current = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+    mermaidQueue.request(
+      mermaidIdRef.current,
+      mermaidSource,
+      currentTheme,
+      (result) => {
+        setSvgContent(result.svg)
+        setError(result.error)
+        setIsLoading(false)
+      }
+    )
 
     return () => {
-      cancelled = true
+      mermaidQueue.cancel(mermaidIdRef.current)
     }
-  }, [isMermaid, mermaidSource, mermaidId, themeKey])
+  }, [isMermaid, mermaidSource, isVisible, themeKey])
 
   return (
     <NodeViewWrapper className={`code-block-wrapper ${selected ? 'selected' : ''}`}>
@@ -174,13 +186,15 @@ function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: 
         </div>
       </div>
       {isMermaid ? (
-        <div className="mermaid-preview" contentEditable={false}>
+        <div ref={previewRef} className="mermaid-preview" contentEditable={false}>
           {error ? (
             <div className="mermaid-error">Mermaid Error: {error}</div>
           ) : svgContent ? (
             <div className="mermaid-svg-container" dangerouslySetInnerHTML={{ __html: svgContent }} />
-          ) : (
+          ) : isLoading ? (
             <div className="mermaid-loading">渲染中...</div>
+          ) : (
+            <div className="mermaid-placeholder">滚动查看图表</div>
           )}
         </div>
       ) : (
