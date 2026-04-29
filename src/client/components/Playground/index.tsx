@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { ArrowLeft, FlaskConical, Sun, Moon } from 'lucide-react'
+import { ArrowLeft, FlaskConical } from 'lucide-react'
 import { Button } from '@/client/components/ui/button'
 import { cn } from '@/client/lib/utils'
 import { playgroundCases } from '@/client/components/playground/registry'
@@ -9,28 +9,12 @@ interface PlaygroundProps {
   onClose?: () => void
 }
 
-function VariantCard({ variant, index }: { variant: PlaygroundVariant; index: number }) {
-  const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light')
-
+function VariantCard({ variant }: { variant: PlaygroundVariant }) {
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-card">
       {/* Card Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="flex items-center justify-center size-6 rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
-            {String.fromCharCode(65 + index)}
-          </span>
-          <span className="text-sm font-medium truncate">{variant.name}</span>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 min-h-7 min-w-7 shrink-0"
-          onClick={() => setPreviewTheme(prev => prev === 'light' ? 'dark' : 'light')}
-          title={previewTheme === 'light' ? '切换到深色预览' : '切换到浅色预览'}
-        >
-          {previewTheme === 'light' ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
-        </Button>
+      <div className="px-4 py-3 border-b border-border bg-muted/30">
+        <span className="text-sm font-medium">{variant.name}</span>
       </div>
 
       {/* Description */}
@@ -41,12 +25,7 @@ function VariantCard({ variant, index }: { variant: PlaygroundVariant; index: nu
       )}
 
       {/* Preview Area */}
-      <div
-        className={cn(
-          "p-6 flex items-center justify-center min-h-[120px]",
-          previewTheme === 'dark' ? "bg-neutral-900" : "bg-white"
-        )}
-      >
+      <div className="p-6 flex items-center justify-center min-h-[120px]">
         {variant.component}
       </div>
     </div>
@@ -110,7 +89,7 @@ export default function Playground({ onClose }: PlaygroundProps) {
             )}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               {selectedCase.variants.map((variant, i) => (
-                <VariantCard key={i} variant={variant} index={i} />
+                <VariantCard key={i} variant={variant} />
               ))}
             </div>
           </div>
