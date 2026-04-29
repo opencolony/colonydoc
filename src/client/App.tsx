@@ -47,6 +47,16 @@ interface FileGroup {
   error?: string
 }
 
+/** 项目色板 — 与 TabBar 保持一致 */
+const PROJECT_COLORS = [
+  '#2563eb', // blue-600
+  '#059669', // emerald-600
+  '#d97706', // amber-600
+  '#7c3aed', // violet-600
+  '#e11d48', // rose-600
+  '#0891b2', // cyan-600
+]
+
 interface SidebarContentProps {
   groups: FileGroup[]
   activePath: string | null
@@ -146,41 +156,47 @@ const SidebarContent = memo(function SidebarContent({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-1 px-4 py-2 border-b border-border shrink-0 overflow-x-auto dir-tabs-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {groups.map(group => (
-            <Button
-              key={group.root.path}
-              variant={activeRoot === group.root.path ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => onDirChange?.(group.root.path)}
-              className={cn(
-                "whitespace-nowrap relative group flex-shrink-0",
-                group.error && "border-destructive text-destructive hover:text-destructive"
-              )}
-              title={group.error || group.root.path}
-            >
-              {group.error && (
-                <AlertCircle className="size-3 mr-1 text-destructive shrink-0" />
-              )}
-              <span className="flex-shrink-0">
-                {group.root.name || group.root.path.split('/').pop() || group.root.path}
-              </span>
-              {/* Desktop tooltip */}
-              <span className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                {group.error ? `${group.root.path} (${group.error})` : group.root.path}
-              </span>
-            </Button>
-          ))}
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="flex items-center gap-1.5 px-4 py-2 border-b border-border shrink-0 overflow-x-auto dir-tabs-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {groups.map((group, idx) => {
+            const isActive = activeRoot === group.root.path
+            const projectColor = PROJECT_COLORS[idx % PROJECT_COLORS.length]
+            return (
+              <button
+                key={group.root.path}
+                onClick={() => onDirChange?.(group.root.path)}
+                className={cn(
+                  'relative group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 shrink-0',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  group.error && !isActive && 'text-destructive/70 hover:text-destructive'
+                )}
+                title={group.error || group.root.path}
+              >
+                <span
+                  className={cn('size-1.5 rounded-full shrink-0', isActive ? 'bg-primary-foreground/60' : '')}
+                  style={{ backgroundColor: isActive ? undefined : projectColor }}
+                />
+                {group.error && (
+                  <AlertCircle className="size-3 text-destructive shrink-0" />
+                )}
+                <span className="truncate max-w-[100px]">
+                  {group.root.name || group.root.path.split('/').pop() || group.root.path}
+                </span>
+                {/* Desktop tooltip */}
+                <span className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                  {group.error ? `${group.root.path} (${group.error})` : group.root.path}
+                </span>
+              </button>
+            )
+          })}
+          <button
             onClick={() => onAddDir?.()}
-            className="whitespace-nowrap flex-shrink-0"
+            className="flex items-center justify-center size-7 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors shrink-0"
             title="添加目录"
           >
-            <Plus className="size-4 mr-1" />
-            添加
-          </Button>
+            <Plus className="size-3.5" />
+          </button>
         </div>
       )}
       <FileTree
