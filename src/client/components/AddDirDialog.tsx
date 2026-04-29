@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef, memo } from 'react'
-import { Search, Folder, FolderOpen, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react'
+import { Search, Folder, FolderOpen, X, Clock, Zap } from 'lucide-react'
 import { Input } from './ui/input'
 import {
   Dialog,
@@ -57,6 +57,81 @@ function pathJoin(a: string, b: string): string {
   return normalizedA + sep + normalizedB
 }
 
+// 高亮匹配文字的组件
+function HighlightPath({ path, query }: { path: string; query: string }) {
+  if (!query.trim()) return <span className="truncate">{path}</span>
+
+  const lowerPath = path.toLowerCase()
+  const lowerQuery = query.toLowerCase().trim()
+
+  // 找到所有匹配位置
+  const matchIndices = new Set<number>()
+  let idx = lowerPath.indexOf(lowerQuery)
+  while (idx !== -1) {
+    for (let i = idx; i < idx + lowerQuery.length; i++) {
+      matchIndices.add(i)
+    }
+    idx = lowerPath.indexOf(lowerQuery, idx + lowerQuery.length)
+  }
+
+  if (matchIndices.size === 0) {
+    return <span className="truncate">{path}</span>
+  }
+
+  const result: React.ReactNode[] = []
+  let currentText = ''
+  let isHighlight = false
+
+  for (let i = 0; i < path.length; i++) {
+    const shouldHighlight = matchIndices.has(i)
+    if (shouldHighlight !== isHighlight) {
+      if (currentText) {
+        result.push(
+          isHighlight
+            ? <mark key={i} className="bg-transparent font-semibold text-primary">{currentText}</mark>
+            : <span key={i}>{currentText}</span>
+        )
+      }
+      currentText = path[i]
+      isHighlight = shouldHighlight
+    } else {
+      currentText += path[i]
+    }
+  }
+  if (currentText) {
+    result.push(
+      isHighlight
+        ? <mark key="last" className="bg-transparent font-semibold text-primary">{currentText}</mark>
+        : <span key="last">{currentText}</span>
+    )
+  }
+
+  return <span className="truncate">{result}</span>
+}
+
+// 从搜索结果中提取常见路径前缀作为快捷芯片
+const CHIP_EXCLUDE = new Set(['home', 'yuexiaoliang', 'users', 'usr', 'var', 'opt', 'tmp'])
+
+function extractChipFilters(results: SearchResultItem[]): string[] {
+  const prefixCounts = new Map<string, number>()
+  for (const r of results) {
+    const parts = r.path.split(/[\\/]/).filter(Boolean)
+    // 取最后两级之前的路径段作为前缀候选
+    for (let i = 1; i < parts.length - 1 && i <= 4; i++) {
+      const prefix = parts[i]
+      if (prefix && prefix.length > 1 && !CHIP_EXCLUDE.has(prefix.toLowerCase())) {
+        prefixCounts.set(prefix, (prefixCounts.get(prefix) || 0) + 1)
+      }
+    }
+  }
+  // 按出现频率排序，取前 4 个（至少出现 2 次）
+  return Array.from(prefixCounts.entries())
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([name]) => name)
+}
+
 export const AddDirDialog = memo(function AddDirDialog({
   open,
   onOpenChange,
@@ -73,6 +148,7 @@ export const AddDirDialog = memo(function AddDirDialog({
   const [isAdding, setIsAdding] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isSearchMode, setIsSearchMode] = useState(false)
+  const [activeChip, setActiveChip] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<number | null>(null)
 
@@ -102,6 +178,7 @@ export const AddDirDialog = memo(function AddDirDialog({
     setError(null)
     setIsAdding(false)
     setIsSearchMode(false)
+    setActiveChip(null)
   }, [open])
 
   useEffect(() => {
@@ -250,9 +327,27 @@ export const AddDirDialog = memo(function AddDirDialog({
     name: d.split(/[\\/]/).pop() || d,
   }))
 
+  const chipFilters = useMemo(() => extractChipFilters(searchResults), [searchResults])
+
+  const handleChipClick = useCallback((chip: string) => {
+    const newChip = activeChip === chip ? null : chip
+    setActiveChip(newChip)
+    if (newChip) {
+      // 将芯片作为搜索前缀
+      const currentQuery = inputValue.trim()
+      const baseQuery = currentQuery.replace(/^[\w-]+\//, '')
+      setInputValue(`${newChip}/${baseQuery}`)
+    } else {
+      // 取消芯片时，移除前缀
+      setInputValue(inputValue.replace(/^[\w-]+\//, ''))
+    }
+    inputRef.current?.focus()
+  }, [activeChip, inputValue])
+
   const content = (
     <>
-      <div className="space-y-1 py-4">
+      <div className="space-y-2 py-4">
+        {/* 搜索框 */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
           <Input
@@ -262,7 +357,7 @@ export const AddDirDialog = memo(function AddDirDialog({
             placeholder="输入路径或搜索目录..."
             disabled={isAdding}
             className={cn(
-              "pl-9 pr-8",
+              "pl-9 pr-8 rounded-xl",
               isMobile && "h-12 text-base"
             )}
           />
@@ -278,42 +373,84 @@ export const AddDirDialog = memo(function AddDirDialog({
           )}
         </div>
 
+        {/* 快捷芯片 */}
+        {isSearchMode && chipFilters.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {chipFilters.map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => handleChipClick(chip)}
+                className={cn(
+                  'shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors',
+                  activeChip === chip
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
+
         {error && (
           <p className="text-sm text-destructive px-1">{error}</p>
         )}
 
         <ScrollArea className={cn(
-          "border rounded-md bg-background",
+          "border rounded-xl bg-background",
           isMobile ? "h-[45vh]" : "h-[320px]"
         )}>
           <div className="p-2">
+            {/* 最近项目 */}
             {recentDirItems.length > 0 && (
-              <div className="mb-4">
-                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  最近项目
+              <div className="mb-3">
+                <div className="flex items-center gap-1.5 px-1 mb-1.5">
+                  <Clock className="size-3 text-muted-foreground/50" />
+                  <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">最近项目</span>
                 </div>
                 <div className="space-y-0.5">
-                  {recentDirItems.map((dir) => (
-                    <button
-                      key={dir.fullPath}
-                      type="button"
-                      onClick={() => handleAddDir(dir.fullPath)}
-                      disabled={isAdding}
-                      className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground text-left transition-colors disabled:opacity-50"
-                    >
-                      <FolderOpen className="size-4 shrink-0 text-primary" />
-                      <span className="truncate">{dir.displayPath}</span>
-                    </button>
-                  ))}
+                  {recentDirItems.map((dir) => {
+                    const parentPath = dir.displayPath.slice(0, -dir.name.length)
+                    return (
+                      <button
+                        key={dir.fullPath}
+                        type="button"
+                        onClick={() => handleAddDir(dir.fullPath)}
+                        disabled={isAdding}
+                        className="w-full flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-accent text-left transition-colors disabled:opacity-50"
+                      >
+                        <FolderOpen className="size-4 shrink-0 text-primary/60 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{dir.name}</p>
+                          {parentPath && (
+                            <p className="text-[10px] text-muted-foreground/50 truncate">{parentPath}</p>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
 
+            {/* 搜索结果 / 浏览目录 */}
             <div>
-              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center justify-between">
-                <span>{isSearchMode ? '搜索结果' : '打开项目'}</span>
+              <div className="flex items-center gap-1.5 px-1 mb-1.5">
+                {isSearchMode ? (
+                  <>
+                    <Zap className="size-3 text-muted-foreground/50" />
+                    <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">搜索结果</span>
+                  </>
+                ) : (
+                  <>
+                    <Folder className="size-3 text-muted-foreground/50" />
+                    <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">打开项目</span>
+                  </>
+                )}
                 {isLoading && (
-                  <span className="text-[10px] normal-case">加载中...</span>
+                  <span className="text-[10px] text-muted-foreground/40 normal-case ml-auto">加载中...</span>
                 )}
               </div>
 
@@ -324,18 +461,28 @@ export const AddDirDialog = memo(function AddDirDialog({
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    {searchItems.map((item) => (
-                      <button
-                        key={item.fullPath}
-                        type="button"
-                        onClick={() => handleAddDir(item.fullPath)}
-                        disabled={isAdding}
-                        className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground text-left transition-colors disabled:opacity-50"
-                      >
-                        <Folder className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{item.displayPath}</span>
-                      </button>
-                    ))}
+                    {searchItems.map((item) => {
+                      const parentPath = item.displayPath.slice(0, -item.name.length)
+                      return (
+                        <button
+                          key={item.fullPath}
+                          type="button"
+                          onClick={() => handleAddDir(item.fullPath)}
+                          disabled={isAdding}
+                          className="w-full flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-accent text-left transition-colors disabled:opacity-50"
+                        >
+                          <Folder className="size-4 shrink-0 text-muted-foreground/40 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm truncate">
+                              <HighlightPath path={item.name} query={inputValue.replace(/^[\w-]+\//, '')} />
+                            </p>
+                            {parentPath && (
+                              <p className="text-[10px] text-muted-foreground/50 truncate">{parentPath}</p>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
                 )
               ) : (
@@ -345,18 +492,26 @@ export const AddDirDialog = memo(function AddDirDialog({
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    {browseDirItems.map((dir) => (
-                      <button
-                        key={dir.fullPath}
-                        type="button"
-                        onClick={() => handleAddDir(dir.fullPath)}
-                        disabled={isAdding}
-                        className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground text-left transition-colors disabled:opacity-50"
-                      >
-                        <Folder className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{dir.displayPath}</span>
-                      </button>
-                    ))}
+                    {browseDirItems.map((dir) => {
+                      const parentPath = dir.displayPath.slice(0, -dir.name.length)
+                      return (
+                        <button
+                          key={dir.fullPath}
+                          type="button"
+                          onClick={() => handleAddDir(dir.fullPath)}
+                          disabled={isAdding}
+                          className="w-full flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-accent text-left transition-colors disabled:opacity-50"
+                        >
+                          <Folder className="size-4 shrink-0 text-muted-foreground/40 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{dir.name}</p>
+                            {parentPath && (
+                              <p className="text-[10px] text-muted-foreground/50 truncate">{parentPath}</p>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
                 )
               )}
