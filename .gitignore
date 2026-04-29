@@ -6,3 +6,4 @@ workspace/
 package-lock.json
 .playwright-mcp/
 .sisyphus/
+.tmp

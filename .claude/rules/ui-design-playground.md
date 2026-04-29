@@ -5,22 +5,25 @@
 ## 流程要求
 
 1. **创建 Playground Case**
+
    - 在 `src/client/components/playground/cases/` 目录下新建 case 文件，命名格式：`{模块名}-{设计目标}.tsx`
    - 在 `src/client/components/playground/registry.ts` 中注册该 case
    - Case 结构遵循 `PlaygroundCase` 接口（`id`, `name`, `description`, `variants[]`）
 
 2. **设计 6 个候选项**
-   - 每个 case 必须包含 **6 个不同的 `PlaygroundVariant`**
+
+   - 每个 case 必须包含 **6 个不同的** `PlaygroundVariant`
    - 每个 variant 是一个独立的视觉方案，使用不同的布局、配色、交互风格
    - Variant 命名格式：`方案 X：{风格描述}`（X 为 A-F）
    - 每个 variant 需提供 `name`、`description` 和 `component`
 
 3. **启动开发服务器预览**
+
    - 确保 `note` Tmux 会话中已运行 `pnpm dev`
-   - 在浏览器中访问 Playground 页面查看所有候选项
    - 确认每个 variant 在浅色和深色主题下都能正常显示
 
 4. **用户选择**
+
    - 向用户展示 6 个候选项的截图或描述
    - 由用户选定最终方案后，再将选定方案提取到正式组件中实现
 
@@ -47,3 +50,4 @@ interface PlaygroundCase {
 - **禁止**在未经过 Playground 设计阶段就直接修改正式组件代码
 - **禁止**候选项少于 6 个
 - **禁止**候选项之间差异过小（如仅改颜色、字号）
+- **禁止**使用 chrome-devtools mcp 对候选项进行测试。
