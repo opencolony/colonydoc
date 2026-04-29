@@ -1,5 +1,5 @@
 import { memo, SetStateAction, useState, useRef, useEffect } from 'react'
-import { ChevronRight, File, Folder, Trash2, FileText, MoreHorizontal, Pencil } from 'lucide-react'
+import { ChevronRight, File, Folder, FolderOpen, Trash2, FileText, MoreHorizontal, Pencil, ArrowRight, FilePlus, FolderPlus } from 'lucide-react'
 import { cn } from '@/client/lib/utils'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -254,35 +254,66 @@ const EmptyState = memo(({ activeRoot, onCreateRequest, onEditDir }: {
   onEditDir?: () => void
 }) => {
   const rootName = activeRoot?.split('/').pop() || '根目录'
+  const [activeAction, setActiveAction] = useState<'file' | 'folder' | null>(null)
+
   return (
-    <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm text-center p-6">
-      <Folder className="size-12 mb-4 opacity-50" />
-      <div className="mb-2">根目录「{rootName}」暂无文件</div>
-      <div className="flex gap-1 mt-2">
+    <div className="flex flex-col items-center justify-center h-full text-center p-6">
+      {/* 图标区域 */}
+      <div className="mb-5 relative">
+        <div
+          className={cn(
+            'size-16 rounded-xl flex items-center justify-center transition-colors duration-300',
+            activeAction === 'file'
+              ? 'bg-primary/10'
+              : activeAction === 'folder'
+                ? 'bg-orange-500/10'
+                : 'bg-muted'
+          )}
+        >
+          {activeAction === 'file' && <FileText className="size-8 text-primary" />}
+          {activeAction === 'folder' && <Folder className="size-8 text-orange-500" />}
+          {!activeAction && <FolderOpen className="size-8 text-muted-foreground/40" />}
+        </div>
+      </div>
+
+      {/* 标题和描述 */}
+      <h3 className="text-base font-semibold text-foreground mb-1.5">这个目录是空的</h3>
+      <p className="text-xs text-muted-foreground mb-6 max-w-[220px]">
+        「{rootName}」里还没有任何内容，选择下面的操作来开始吧
+      </p>
+
+      {/* 操作按钮 */}
+      <div className="flex flex-col gap-2 w-full max-w-[200px]">
         <Button
-          variant="outline"
           size="sm"
+          className="w-full justify-between text-xs"
+          onMouseEnter={() => setActiveAction('file')}
+          onMouseLeave={() => setActiveAction(null)}
           onClick={() => onCreateRequest?.(false, '')}
         >
-          <FileText className="size-4 mr-1" />
-          新建文件
+          <span className="flex items-center gap-2">
+            <FilePlus className="size-4" />
+            新建 Markdown 文件
+          </span>
+          <ArrowRight className="size-3.5 opacity-70" />
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
+          className="w-full justify-start text-xs"
+          onMouseEnter={() => setActiveAction('folder')}
+          onMouseLeave={() => setActiveAction(null)}
           onClick={() => onCreateRequest?.(true, '')}
         >
-          <Folder className="size-4 mr-1" />
+          <FolderPlus className="size-4 mr-2" />
           新建文件夹
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        <button
+          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors mt-1"
           onClick={() => onEditDir?.()}
         >
-          <Pencil className="size-4 mr-1" />
-          目录设置
-        </Button>
+          或者，打开目录设置
+        </button>
       </div>
     </div>
   )
