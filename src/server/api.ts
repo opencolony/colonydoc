@@ -78,7 +78,7 @@ function hasAllowedExtension(filename: string, extensions: string[]): boolean {
   return extensions.includes(ext)
 }
 
-async function walkDirectory(dir: string, dirPath: string, config: ColonynoteConfig, matcher: IgnoreMatcher): Promise<FileNode[]> {
+async function walkDirectory(dir: string, dirPath: string, config: ColonynoteConfig, matcher: IgnoreMatcher, visited: Set<string> = new Set()): Promise<FileNode[]> {
   const nodes: FileNode[] = []
 
   try {
@@ -86,13 +86,37 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name)
-      const isDir = entry.isDirectory()
+      let isDir = entry.isDirectory()
+      let isFile = entry.isFile()
+
+      // 处理符号链接：跟随链接获取实际类型
+      if (entry.isSymbolicLink()) {
+        try {
+          const stat = await fs.stat(fullPath)
+          isDir = stat.isDirectory()
+          isFile = stat.isFile()
+        } catch {
+          // 符号链接目标不存在或无法访问，跳过
+          continue
+        }
+      }
 
       if (!config.showHiddenFiles && entry.name.startsWith('.')) continue
       if (matcher.isIgnored(fullPath, isDir)) continue
 
       if (isDir) {
-        const children = await walkDirectory(fullPath, dirPath, config, matcher)
+        // 对符号链接目录进行循环检测（防止符号链接指向祖先目录导致无限递归）
+        if (entry.isSymbolicLink()) {
+          let realPath: string
+          try {
+            realPath = await fs.realpath(fullPath)
+          } catch {
+            realPath = fullPath
+          }
+          if (visited.has(realPath)) continue
+          visited.add(realPath)
+        }
+        const children = await walkDirectory(fullPath, dirPath, config, matcher, visited)
         const relativePath = path.relative(dirPath, fullPath).replace(/\\/g, '/')
         nodes.push({
           name: entry.name,
@@ -101,7 +125,7 @@ async function walkDirectory(dir: string, dirPath: string, config: ColonynoteCon
           rootPath: dirPath,
           children,
         })
-      } else if (entry.isFile()) {
+      } else if (isFile) {
         if (hasAllowedExtension(entry.name, config.allowedExtensions)) {
           const relativePath = path.relative(dirPath, fullPath).replace(/\\/g, '/')
           nodes.push({
