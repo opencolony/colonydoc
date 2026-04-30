@@ -12,6 +12,7 @@ Markdown 在线编辑器，支持服务端文件编辑、实时预览、Mermaid 
 
 ```bash
 # 全栈开发（后端 + 前端热更新）- 前端 5787，后端 5788
+# 默认使用 ./workspace 作为文档目录
 pnpm dev
 
 # 仅前端开发（Vite 开发服务器，端口 5787）
@@ -37,6 +38,9 @@ pnpm test
 
 # 运行单个测试文件
 pnpm vitest run src/path/to/file.test.ts
+
+# 发布新版本（交互式选择版本号）
+pnpm release
 ```
 
 ## 技术栈
