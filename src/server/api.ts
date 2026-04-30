@@ -253,9 +253,7 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
         }
       }
 
-      saveConfig(config, env)
-      invalidateTreeCache()
-
+      // 先更新内存中的配置，再保存到文件
       if (typeof updates.showHiddenFiles === 'boolean') {
         config.showHiddenFiles = updates.showHiddenFiles
       }
@@ -268,6 +266,9 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
           matcher.updateGlobalPatterns(updates.ignore.patterns)
         }
       }
+
+      saveConfig(config, env)
+      invalidateTreeCache()
 
       return c.json({ success: true, config: { showHiddenFiles: config.showHiddenFiles, allowedExtensions: config.allowedExtensions, ignore: config.ignore } })
     } catch (e) {
