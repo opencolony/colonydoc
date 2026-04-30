@@ -982,6 +982,7 @@ function App() {
                     onChange={(val) => updateTabContent(activeTab.key, val)}
                     mode={editorMode}
                     path={activeTab.path}
+                    rootPath={activeTab.rootPath}
                     scrollPosition={scrollPositionRef.current}
                     onLinkClick={(linkPath) => openTab(linkPath, activeTab.rootPath)}
                   />

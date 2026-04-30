@@ -706,6 +706,38 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     }
 
     try {
+      const ext = path.extname(fullPath).toLowerCase()
+      const binaryExts = new Set([
+        '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico',
+        '.pdf', '.mp3', '.mp4', '.wav', '.ogg', '.webm', '.zip', '.tar', '.gz',
+      ])
+      const contentTypeMap: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
+        '.bmp': 'image/bmp',
+        '.ico': 'image/x-icon',
+        '.pdf': 'application/pdf',
+        '.mp3': 'audio/mpeg',
+        '.mp4': 'video/mp4',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.webm': 'video/webm',
+        '.zip': 'application/zip',
+        '.tar': 'application/x-tar',
+        '.gz': 'application/gzip',
+      }
+
+      if (binaryExts.has(ext)) {
+        const content = await fs.readFile(fullPath)
+        return new Response(content, {
+          headers: { 'Content-Type': contentTypeMap[ext] || 'application/octet-stream' },
+        })
+      }
+
       const content = await fs.readFile(fullPath, 'utf-8')
       return c.text(content)
     } catch (e) {

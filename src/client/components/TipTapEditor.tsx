@@ -10,7 +10,7 @@ import { TableCell } from '@tiptap/extension-table-cell'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 import { Link } from '@tiptap/extension-link'
-import { Image } from '@tiptap/extension-image'
+import { Image as TipTapImage } from '@tiptap/extension-image'
 import { Highlight } from '@tiptap/extension-highlight'
 import { Underline } from '@tiptap/extension-underline'
 import { Typography } from '@tiptap/extension-typography'
@@ -26,6 +26,60 @@ import { mermaidQueue } from '../lib/mermaidQueue'
 
 const lowlight = createLowlight(common)
 
+/**
+ * 将相对路径解析为基于当前文件路径的绝对路径
+ */
+function resolveRelativePath(href: string, currentFilePath: string): string {
+  const currentDir = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'))
+  let resolvedPath = href
+
+  if (href.startsWith('./')) {
+    resolvedPath = currentDir + href.slice(1)
+  } else if (href.startsWith('../')) {
+    let parentDir = currentDir
+    let relative = href.slice(3)
+    while (relative.startsWith('../')) {
+      const lastSlash = parentDir.lastIndexOf('/')
+      if (lastSlash <= 0) break
+      parentDir = parentDir.substring(0, lastSlash)
+      relative = relative.slice(3)
+    }
+    if (!relative.startsWith('../')) {
+      resolvedPath = parentDir + '/' + relative
+    } else {
+      resolvedPath = href
+    }
+  } else if (!href.startsWith('/')) {
+    resolvedPath = currentDir + '/' + href
+  }
+
+  return decodeURIComponent(resolvedPath)
+}
+
+/**
+ * 将图片 src 转换为服务端可访问的 URL
+ */
+function resolveImageSrc(src: string, currentFilePath: string | null | undefined, rootPath: string | null | undefined): string {
+  // 外部 URL、data URI 保持不变
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+    return src
+  }
+
+  // 没有上下文信息，无法解析路径
+  if (!currentFilePath || !rootPath) {
+    return src
+  }
+
+  let resolvedPath: string
+  if (src.startsWith('/')) {
+    // 绝对路径：以根目录为基准
+    resolvedPath = src
+  } else {
+    resolvedPath = resolveRelativePath(src, currentFilePath)
+  }
+  return `/api/files${resolvedPath}?root=${encodeURIComponent(rootPath)}`
+}
+
 interface TipTapEditorProps {
   value: string
   onChange: (value: string) => void
@@ -33,6 +87,7 @@ interface TipTapEditorProps {
   placeholder?: string
   readOnly?: boolean
   path?: string | null
+  rootPath?: string | null
   scrollPosition?: number
   onLinkClick?: (path: string) => void
 }
@@ -231,7 +286,7 @@ const CustomCodeBlock = CodeBlockLowlight.extend({
   },
 }).configure({ lowlight })
 
-export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, scrollPosition, onLinkClick }: TipTapEditorProps) {
+export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, rootPath, scrollPosition, onLinkClick }: TipTapEditorProps) {
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
   const sourceScrollRef = useRef<number>(0)
@@ -315,7 +370,18 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       Link.configure({
         openOnClick: false,
       }),
-      Image,
+      TipTapImage.extend({
+        renderHTML({ node, HTMLAttributes }) {
+          const resolvedSrc = resolveImageSrc(
+            node.attrs.src as string,
+            path,
+            rootPath
+          )
+          return ['img', { ...this.options.HTMLAttributes, ...HTMLAttributes, src: resolvedSrc }]
+        },
+      }).configure({
+        allowBase64: true,
+      }),
       Highlight.configure({
         multicolor: true,
       }),
