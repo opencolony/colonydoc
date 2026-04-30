@@ -80,6 +80,15 @@ function resolveImageSrc(src: string, currentFilePath: string | null | undefined
   return `/api/files${resolvedPath}?root=${encodeURIComponent(rootPath)}`
 }
 
+/**
+ * 图片渲染上下文，用于在 addNodeView 中访问当前文件路径信息
+ * 避免在 renderHTML 中转换 src（会被 getHTMLFromFragment 调用，污染 Markdown 输出）
+ */
+const imageRenderContext = {
+  path: null as string | null,
+  rootPath: null as string | null,
+}
+
 interface TipTapEditorProps {
   value: string
   onChange: (value: string) => void
@@ -287,6 +296,10 @@ const CustomCodeBlock = CodeBlockLowlight.extend({
 }).configure({ lowlight })
 
 export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, rootPath, scrollPosition, onLinkClick }: TipTapEditorProps) {
+  // 同步更新图片渲染上下文，供 addNodeView 使用
+  imageRenderContext.path = path ?? null
+  imageRenderContext.rootPath = rootPath ?? null
+
   const isInternalUpdateRef = useRef(false)
   const lastNotifiedValueRef = useRef<string>(value)
   const sourceScrollRef = useRef<number>(0)
@@ -371,13 +384,38 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
         openOnClick: false,
       }),
       TipTapImage.extend({
-        renderHTML({ node, HTMLAttributes }) {
-          const resolvedSrc = resolveImageSrc(
-            node.attrs.src as string,
-            path,
-            rootPath
-          )
-          return ['img', { ...this.options.HTMLAttributes, ...HTMLAttributes, src: resolvedSrc }]
+        addNodeView() {
+          return ({ node, HTMLAttributes }) => {
+            const img = document.createElement('img')
+
+            const applySrc = () => {
+              img.src = resolveImageSrc(
+                node.attrs.src as string,
+                imageRenderContext.path,
+                imageRenderContext.rootPath
+              )
+            }
+
+            applySrc()
+            if (node.attrs.alt) img.alt = node.attrs.alt
+            if (node.attrs.title) img.title = node.attrs.title
+            if (HTMLAttributes.class) img.className = HTMLAttributes.class
+
+            return {
+              dom: img,
+              update: (updatedNode) => {
+                if (updatedNode.type.name !== 'image') return false
+                applySrc()
+                if (updatedNode.attrs.alt !== node.attrs.alt) {
+                  img.alt = updatedNode.attrs.alt || ''
+                }
+                if (updatedNode.attrs.title !== node.attrs.title) {
+                  img.title = updatedNode.attrs.title || ''
+                }
+                return true
+              },
+            }
+          }
         },
       }).configure({
         allowBase64: true,
@@ -423,6 +461,13 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     },
   })
   editorRef.current = editor
+
+  // 当 path/rootPath 变化时，触发所有 image NodeView 更新 src
+  useEffect(() => {
+    if (editor) {
+      editor.view.updateState(editor.state)
+    }
+  }, [path, rootPath, editor])
 
   // Re-extract frontmatter when value changes (e.g. external file change, mode switch)
   // Sync external value changes to editor (body only, not frontmatter)
