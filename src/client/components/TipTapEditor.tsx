@@ -384,34 +384,124 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
         openOnClick: false,
       }),
       TipTapImage.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            style: { default: null },
+            class: { default: null },
+            htmlAttrs: { default: null },
+          }
+        },
+        parseHTML() {
+          return [
+            {
+              tag: this.options.allowBase64 ? 'img[src]' : 'img[src]:not([src^="data:"])',
+              getAttrs: (element) => {
+                const el = element as HTMLImageElement
+                const known = ['src', 'alt', 'title', 'width', 'height', 'style', 'class', 'htmlAttrs', 'draggable']
+                const extra: Record<string, string> = {}
+                for (const attr of el.attributes) {
+                  if (!known.includes(attr.name)) {
+                    extra[attr.name] = attr.value
+                  }
+                }
+                return {
+                  src: el.getAttribute('src'),
+                  alt: el.getAttribute('alt'),
+                  title: el.getAttribute('title'),
+                  width: el.getAttribute('width'),
+                  height: el.getAttribute('height'),
+                  style: el.getAttribute('style'),
+                  class: el.getAttribute('class'),
+                  htmlAttrs: Object.keys(extra).length > 0 ? JSON.stringify(extra) : null,
+                }
+              },
+            },
+          ]
+        },
+        addStorage() {
+          return {
+            markdown: {
+              serialize(state: any, node: any) {
+                const hasExtraAttrs =
+                  node.attrs.width || node.attrs.height || node.attrs.style || node.attrs.class || node.attrs.htmlAttrs
+                if (hasExtraAttrs) {
+                  const attrs: Record<string, string> = { src: node.attrs.src }
+                  if (node.attrs.alt) attrs.alt = node.attrs.alt
+                  if (node.attrs.title) attrs.title = node.attrs.title
+                  if (node.attrs.width) attrs.width = String(node.attrs.width)
+                  if (node.attrs.height) attrs.height = String(node.attrs.height)
+                  if (node.attrs.style) attrs.style = node.attrs.style
+                  if (node.attrs.class) attrs.class = node.attrs.class
+                  if (node.attrs.htmlAttrs) {
+                    try {
+                      const extra = JSON.parse(node.attrs.htmlAttrs)
+                      Object.assign(attrs, extra)
+                    } catch {}
+                  }
+                  const attrStr = Object.entries(attrs)
+                    .map(([k, v]) => `${k}="${v.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"`)
+                    .join(' ')
+                  state.write(`<img ${attrStr}>`)
+                } else {
+                  const alt = state.esc(node.attrs.alt || '')
+                  const src = state.esc(node.attrs.src || '')
+                  const title = node.attrs.title ? ` "${state.esc(node.attrs.title)}"` : ''
+                  state.write(`![${alt}](${src}${title})`)
+                }
+                state.closeBlock(node)
+              },
+            },
+          }
+        },
         addNodeView() {
-          return ({ node, HTMLAttributes }) => {
+          return ({ node }) => {
             const img = document.createElement('img')
 
-            const applySrc = () => {
+            const applyAttrs = (targetNode = node) => {
               img.src = resolveImageSrc(
-                node.attrs.src as string,
+                targetNode.attrs.src as string,
                 imageRenderContext.path,
                 imageRenderContext.rootPath
               )
+              if (targetNode.attrs.alt) img.alt = targetNode.attrs.alt
+              else img.removeAttribute('alt')
+              if (targetNode.attrs.title) img.title = targetNode.attrs.title
+              else img.removeAttribute('title')
+              if (targetNode.attrs.width) img.setAttribute('width', String(targetNode.attrs.width))
+              else img.removeAttribute('width')
+              if (targetNode.attrs.height) img.setAttribute('height', String(targetNode.attrs.height))
+              else img.removeAttribute('height')
+              img.className = targetNode.attrs.class || ''
+              img.style.cssText = targetNode.attrs.style || ''
+
+              // 清除旧的额外属性
+              const knownAttrs = ['src', 'alt', 'title', 'width', 'height', 'style', 'class', 'contenteditable', 'draggable']
+              for (const attr of Array.from(img.attributes)) {
+                if (!knownAttrs.includes(attr.name)) {
+                  img.removeAttribute(attr.name)
+                }
+              }
+              // 应用新的额外属性
+              if (targetNode.attrs.htmlAttrs) {
+                try {
+                  const extra = JSON.parse(targetNode.attrs.htmlAttrs as string)
+                  for (const [key, value] of Object.entries(extra)) {
+                    if (value != null) {
+                      img.setAttribute(key, String(value))
+                    }
+                  }
+                } catch {}
+              }
             }
 
-            applySrc()
-            if (node.attrs.alt) img.alt = node.attrs.alt
-            if (node.attrs.title) img.title = node.attrs.title
-            if (HTMLAttributes.class) img.className = HTMLAttributes.class
+            applyAttrs()
 
             return {
               dom: img,
               update: (updatedNode) => {
                 if (updatedNode.type.name !== 'image') return false
-                applySrc()
-                if (updatedNode.attrs.alt !== node.attrs.alt) {
-                  img.alt = updatedNode.attrs.alt || ''
-                }
-                if (updatedNode.attrs.title !== node.attrs.title) {
-                  img.title = updatedNode.attrs.title || ''
-                }
+                applyAttrs(updatedNode)
                 return true
               },
             }
