@@ -1,6 +1,6 @@
 # Tmux 开发会话
 
-**所有开发服务的启动、停止必须在名为 `note` 的 Tmux 会话中进行。**
+**所有开发服务的启动、停止必须在名为** `note` **的 Tmux 会话中进行。**
 
 - 启动服务前先检查 `tmux ls` 是否存在 `note` 会话，不存在则 `tmux new-session -d -s note`
 - 在 `note` 会话中启动 `pnpm dev` / `pnpm dev:frontend` / `pnpm start` 等服务

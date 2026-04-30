@@ -1,4 +1,6 @@
-![ColonyNote](public/logo.png)# ColonyNote
+<img src="public/logo.png" alt="ColonyNote" width="120">
+
+# ColonyNote
 
 **A modern Markdown online editor with real-time preview.**
 
@@ -11,7 +13,7 @@ Edit server-side Markdown files directly in your browser — no upload, no downl
 ## Screenshots
 
 <table style="min-width: 50px;">
-<colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><td colspan="1" rowspan="1"><img src="screenshots/light-editor.png" alt="Light Theme Editor"></td><td colspan="1" rowspan="1"><img src="screenshots/dark-editor.png" alt="Dark Theme Editor"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>Light Theme</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>Dark Theme</p></td></tr><tr><td colspan="1" rowspan="1"><img src="screenshots/search.png" alt="Full-text Search"></td><td colspan="1" rowspan="1"><img src="screenshots/mobile-editor.png" alt="Mobile Editor"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>Full-text Search</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>Mobile Editor</p></td></tr></tbody>
+<colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><td colspan="1" rowspan="1"><img src="screenshots/light-editor.png" alt="Light Theme Editor" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/dark-editor.png" alt="Dark Theme Editor" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>Light Theme</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>Dark Theme</p></td></tr><tr><td colspan="1" rowspan="1"><img src="screenshots/search.png" alt="Full-text Search" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/mobile-editor.png" alt="Mobile Editor" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>Full-text Search</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>Mobile Editor</p></td></tr></tbody>
 </table>
 
 ## Features
@@ -108,7 +110,7 @@ The configuration is automatically reloaded when the file changes — no server 
 | `dirs` | `Array<{path, name?, exclude?}>` | Document directories to serve |
 | `allowedExtensions` | `string[]` | File extensions to show in the file tree |
 | `showHiddenFiles` | `boolean` | Whether to show dotfiles |
-| `theme.default` | `"light" | "dark" | "system"` | Default theme mode |
+| `theme.default` | \`"light" | "dark" |
 | `editor.autosave` | `boolean` | Enable auto-save |
 | `editor.debounceMs` | `number` | Auto-save debounce delay in milliseconds |
 | `ignore.patterns` | `string[]` | Global ignore patterns (glob syntax) |

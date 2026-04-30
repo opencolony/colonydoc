@@ -1,6 +1,4 @@
-<div align="center">
-
-<img src="public/logo.png" width="80" height="80" alt="ColonyNote">
+<img src="public/logo.png" alt="ColonyNote" width="120">
 
 # ColonyNote
 
@@ -10,29 +8,12 @@
 
 [English](README.md) · 简体中文
 
-</div>
-
 ---
 
 ## 界面预览
 
-<table>
-  <tr>
-    <td><img src="screenshots/light-editor.png" alt="浅色主题编辑器"></td>
-    <td><img src="screenshots/dark-editor.png" alt="深色主题编辑器"></td>
-  </tr>
-  <tr>
-    <td align="center">浅色主题</td>
-    <td align="center">深色主题</td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/search.png" alt="全文搜索"></td>
-    <td><img src="screenshots/mobile-editor.png" alt="移动端编辑器"></td>
-  </tr>
-  <tr>
-    <td align="center">全文搜索</td>
-    <td align="center">移动端编辑器</td>
-  </tr>
+<table style="min-width: 50px;">
+<colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><td colspan="1" rowspan="1"><img src="screenshots/light-editor.png" alt="浅色主题编辑器" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/dark-editor.png" alt="深色主题编辑器" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>浅色主题</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>深色主题</p></td></tr><tr><td colspan="1" rowspan="1"><img src="screenshots/search.png" alt="全文搜索" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/mobile-editor.png" alt="移动端编辑器" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>全文搜索</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>移动端编辑器</p></td></tr></tbody>
 </table>
 
 ## 功能特性
@@ -83,10 +64,10 @@ colonynote --host 127.0.0.1
 ### CLI 选项
 
 | 选项 | 别名 | 描述 | 默认值 |
-|------|------|------|--------|
+| --- | --- | --- | --- |
 | `--dir` | `-d` | 文档根目录（可多次指定） | 当前目录 |
 | `--port` | `-p` | 服务器端口 | `5787` |
-| `--host` | | 服务器监听地址 | `0.0.0.0` |
+| `--host` |  | 服务器监听地址 | `0.0.0.0` |
 
 ## 配置
 
@@ -125,11 +106,11 @@ ColonyNote 从 `~/.colonynote/config.json`（生产环境）或 `~/.colonynote/c
 ### 配置字段说明
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
+| --- | --- | --- |
 | `dirs` | `Array<{path, name?, exclude?}>` | 要服务的文档目录 |
 | `allowedExtensions` | `string[]` | 文件树中显示的文件扩展名 |
 | `showHiddenFiles` | `boolean` | 是否显示隐藏文件（以点开头的文件） |
-| `theme.default` | `"light" \| "dark" \| "system"` | 默认主题模式 |
+| `theme.default` | \`"light" | "dark" |
 | `editor.autosave` | `boolean` | 是否启用自动保存 |
 | `editor.debounceMs` | `number` | 自动保存防抖延迟（毫秒） |
 | `ignore.patterns` | `string[]` | 全局忽略模式（支持 glob 语法） |
@@ -184,4 +165,4 @@ MIT
 
 ## 作者
 
-岳晓亮 <hi@yuexiaoliang.com>
+岳晓亮 [hi@yuexiaoliang.com](mailto:hi@yuexiaoliang.com)
