@@ -242,7 +242,11 @@ function App() {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
   })
-  const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source' | 'read'>('wysiwyg')
+  const [editorMode, setEditorMode] = useState<'wysiwyg' | 'source' | 'read'>(() => {
+    const saved = localStorage.getItem('colonynote-editor-mode')
+    if (saved === 'wysiwyg' || saved === 'source' || saved === 'read') return saved
+    return 'wysiwyg'
+  })
 
   const [currentDir, setCurrentDir] = useState('')
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
@@ -385,6 +389,11 @@ function App() {
       window.removeEventListener('theme-change', handleThemeChange)
     }
   }, [themeMode])
+
+  // 持久化编辑器模式
+  useEffect(() => {
+    localStorage.setItem('colonynote-editor-mode', editorMode)
+  }, [editorMode])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -875,17 +884,17 @@ function App() {
             <Search className="size-5" />
           </Button>
           {/* 方案 C：双态主按钮 + 源码次级 */}
-          <div className="inline-flex items-center gap-1">
+          <div className="inline-flex items-center rounded-lg bg-muted p-0.5 border border-border">
             <Button
               variant="ghost"
               size="icon"
               onClick={handleToggleReadWysiwyg}
               title={editorMode === 'read' ? '切换到编辑模式' : '切换到阅读模式'}
               className={cn(
-                'flex items-center justify-center size-9 rounded-lg transition-all duration-150 border',
+                'flex items-center justify-center size-8 rounded-md transition-all duration-150',
                 editorMode === 'read'
-                  ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary'
-                  : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
               {editorMode === 'read' ? <BookOpen className="size-4" /> : <Pencil className="size-4" />}
@@ -896,10 +905,10 @@ function App() {
               onClick={handleToggleSource}
               title="源码模式"
               className={cn(
-                'flex items-center justify-center size-9 rounded-lg transition-all duration-150 border',
+                'flex items-center justify-center size-8 rounded-md transition-all duration-150',
                 editorMode === 'source'
-                  ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary hover:text-primary-foreground'
-                  : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <Code className="size-4" />
@@ -1050,15 +1059,15 @@ function App() {
                     <Search className="size-3.5" />
                   </Button>
                   {/* 方案 C：双态主按钮 + 源码次级 */}
-                  <div className="inline-flex items-center gap-1">
+                  <div className="inline-flex items-center rounded-md bg-muted p-0.5 border border-border">
                     <Button
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        'flex items-center justify-center size-6 rounded-md transition-all duration-150 border',
+                        'flex items-center justify-center size-5 rounded transition-all duration-150',
                         editorMode === 'read'
-                          ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 hover:text-primary'
-                          : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                       onClick={handleToggleReadWysiwyg}
                       title={editorMode === 'read' ? '切换到编辑模式' : '切换到阅读模式'}
@@ -1069,10 +1078,10 @@ function App() {
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        'flex items-center justify-center size-6 rounded-md transition-all duration-150 border',
+                        'flex items-center justify-center size-5 rounded transition-all duration-150',
                         editorMode === 'source'
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary hover:text-primary-foreground'
-                          : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                       onClick={handleToggleSource}
                       title="源码模式"
