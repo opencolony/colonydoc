@@ -795,12 +795,12 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     }
   })
 
-  router.get('/history/version', async (c) => {
+ router.get('/history/version', async (c) => {
     const config = getConfig()
     const rootParam = c.req.query('root')
     const pathParam = c.req.query('path')
-    const timestampParam = c.req.query('timestamp')
-    if (!pathParam || !timestampParam) return c.json({ error: 'path and timestamp are required' }, 400)
+    const idParam = c.req.query('id')
+    if (!pathParam || !idParam) return c.json({ error: 'path and id are required' }, 400)
 
     let dirPath: string | null = null
     if (rootParam) {
@@ -814,11 +814,8 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     const fullPath = path.join(dirPath, pathParam.startsWith('/') ? pathParam.slice(1) : pathParam)
     if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
 
-    const timestamp = parseInt(timestampParam, 10)
-    if (Number.isNaN(timestamp)) return c.json({ error: 'Invalid timestamp' }, 400)
-
     try {
-      const content = await getSnapshotContent(dirPath, pathParam, timestamp)
+      const content = await getSnapshotContent(dirPath, pathParam, idParam)
       if (content === null) return c.json({ error: 'Snapshot not found' }, 404)
       return c.json({ content })
     } catch (e) {
@@ -826,12 +823,12 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     }
   })
 
-  router.post('/history/restore', async (c) => {
+ router.post('/history/restore', async (c) => {
     const config = getConfig()
     const rootParam = c.req.query('root')
     const pathParam = c.req.query('path')
-    const timestampParam = c.req.query('timestamp')
-    if (!pathParam || !timestampParam) return c.json({ error: 'path and timestamp are required' }, 400)
+    const idParam = c.req.query('id')
+    if (!pathParam || !idParam) return c.json({ error: 'path and id are required' }, 400)
 
     let dirPath: string | null = null
     if (rootParam) {
@@ -845,11 +842,8 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     const fullPath = path.join(dirPath, pathParam.startsWith('/') ? pathParam.slice(1) : pathParam)
     if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
 
-    const timestamp = parseInt(timestampParam, 10)
-    if (Number.isNaN(timestamp)) return c.json({ error: 'Invalid timestamp' }, 400)
-
     try {
-      const content = await restoreSnapshot(dirPath, pathParam, timestamp)
+      const content = await restoreSnapshot(dirPath, pathParam, idParam)
       if (content === null) return c.json({ error: 'Snapshot not found' }, 404)
       return c.json({ success: true, content })
     } catch (e) {

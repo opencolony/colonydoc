@@ -122,7 +122,10 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         }
       }, SAVE_IGNORE_BUFFER_MS)
 
-      optionsRef.current.onSave?.(tab.path)
+     optionsRef.current.onSave?.(tab.path)
+      window.dispatchEvent(new CustomEvent('colonynote:file-saved', {
+        detail: { path: tab.path, rootPath },
+      }))
     } catch (e) {
       const errTab = tabsRef.current.get(tabKey)
       if (errTab) {

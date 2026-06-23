@@ -10,6 +10,7 @@ const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const MERGE_INTERVAL_MS = 60 * 1000
 
 export interface SnapshotMeta {
+  id: string
   timestamp: number
   source: string
   size: number
@@ -47,7 +48,20 @@ async function readManifest(dir: string): Promise<SnapshotManifest> {
   try {
     const raw = await fs.readFile(manifestPath(dir), 'utf-8')
     const data = JSON.parse(raw) as SnapshotManifest
-    if (Array.isArray(data.snapshots)) return data
+    if (Array.isArray(data.snapshots)) {
+      // 兼容旧数据：没有 id 的用 timestamp 字符串作为稳定 id
+      let migrated = false
+      for (const s of data.snapshots) {
+        if (!s.id) {
+          s.id = s.timestamp.toString()
+          migrated = true
+        }
+      }
+      if (migrated) {
+        await writeManifest(dir, data)
+      }
+      return data
+    }
   } catch {
     // ignore read/parse errors
   }
@@ -64,7 +78,6 @@ function formatTimestamp(now = Date.now()): string {
 
 async function pruneSnapshots(dir: string, manifest: SnapshotManifest): Promise<void> {
   const now = Date.now()
-  const before = manifest.snapshots.length
   const kept: SnapshotMeta[] = []
   const removedFiles = new Set<string>()
 
@@ -139,9 +152,11 @@ export async function createSnapshot(
     return lastSnapshot
   }
 
+  const newId = crypto.randomUUID()
   const newFile = `${formatTimestamp(now)}.md`
   await fs.writeFile(path.join(dir, newFile), content, 'utf-8')
   const snapshot: SnapshotMeta = {
+    id: newId,
     timestamp: now,
     source,
     size: Buffer.byteLength(content, 'utf-8'),
@@ -160,10 +175,10 @@ export async function listSnapshots(rootPath: string, filePath: string): Promise
   return manifest.snapshots.slice().sort((a, b) => b.timestamp - a.timestamp)
 }
 
-export async function getSnapshotContent(rootPath: string, filePath: string, timestamp: number): Promise<string | null> {
+export async function getSnapshotContent(rootPath: string, filePath: string, id: string): Promise<string | null> {
   const dir = getFileHistoryDir(rootPath, filePath)
   const manifest = await readManifest(dir)
-  const snapshot = manifest.snapshots.find(s => s.timestamp === timestamp)
+  const snapshot = manifest.snapshots.find(s => s.id === id)
   if (!snapshot) return null
   try {
     return await fs.readFile(path.join(dir, snapshot.file), 'utf-8')
@@ -182,8 +197,8 @@ export async function snapshotCurrentFile(rootPath: string, filePath: string, so
   }
 }
 
-export async function restoreSnapshot(rootPath: string, filePath: string, timestamp: number): Promise<string | null> {
-  const content = await getSnapshotContent(rootPath, filePath, timestamp)
+export async function restoreSnapshot(rootPath: string, filePath: string, id: string): Promise<string | null> {
+  const content = await getSnapshotContent(rootPath, filePath, id)
   if (content === null) return null
 
   // 先给当前内容拍个快照，防止后悔

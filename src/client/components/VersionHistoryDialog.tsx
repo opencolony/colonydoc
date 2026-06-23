@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { History, Loader2, AlertCircle, CheckCircle2, ChevronLeft, RotateCcw, FileClock } from 'lucide-react'
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { ScrollArea } from './ui/scroll-area'
 import { cn } from '@/client/lib/utils'
 
 interface SnapshotEntry {
+  id: string
   timestamp: number
   source: string
   size: number
@@ -49,9 +50,14 @@ function formatSource(source: string): string {
   }
 }
 
+interface FileSavedEventDetail {
+  path: string
+  rootPath: string | null
+}
+
 export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDirty, onRestore }: VersionHistoryDialogProps) {
   const [history, setHistory] = useState<SnapshotEntry[]>([])
-  const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [previewContent, setPreviewContent] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -71,27 +77,7 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  useEffect(() => {
-    if (!open) {
-      setHistory([])
-      setSelectedTimestamp(null)
-      setPreviewContent(null)
-      setError(null)
-      setSuccess(null)
-      return
-    }
-    fetchHistory()
-  }, [open, path, rootPath])
-
-  useEffect(() => {
-    if (!selectedTimestamp || !path) {
-      setPreviewContent(null)
-      return
-    }
-    fetchPreview(selectedTimestamp)
-  }, [selectedTimestamp, path, rootPath])
-
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     if (!path) return
     setLoading(true)
     setError(null)
@@ -104,10 +90,20 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
       if (data.error) {
         setError(data.error)
       } else {
-        const list: SnapshotEntry[] = data.history || []
+        const list: SnapshotEntry[] = (data.history || []).map((h: SnapshotEntry) => ({
+          id: h.id,
+          timestamp: h.timestamp,
+          source: h.source,
+          size: h.size,
+        }))
         setHistory(list)
         if (list.length > 0) {
-          setSelectedTimestamp(list[0].timestamp)
+          setSelectedId(prev => {
+            if (prev && list.some(h => h.id === prev)) return prev
+            return list[0].id
+          })
+        } else {
+          setSelectedId(null)
         }
       }
     } catch (e) {
@@ -115,15 +111,27 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
     } finally {
       setLoading(false)
     }
-  }
+  }, [path, rootPath])
 
-  const fetchPreview = async (timestamp: number) => {
+  useEffect(() => {
+    if (!open) {
+      setHistory([])
+      setSelectedId(null)
+      setPreviewContent(null)
+      setError(null)
+      setSuccess(null)
+      return
+    }
+    fetchHistory()
+  }, [open, fetchHistory])
+
+  const fetchPreview = useCallback(async (id: string) => {
     if (!path) return
     setPreviewLoading(true)
     try {
       const url = rootPath
-        ? `/api/files/history/version?root=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&timestamp=${encodeURIComponent(timestamp)}`
-        : `/api/files/history/version?path=${encodeURIComponent(path)}&timestamp=${encodeURIComponent(timestamp)}`
+        ? `/api/files/history/version?root=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&id=${encodeURIComponent(id)}`
+        : `/api/files/history/version?path=${encodeURIComponent(path)}&id=${encodeURIComponent(id)}`
       const res = await fetch(url)
       const data = await res.json()
       if (data.error) {
@@ -136,10 +144,32 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
     } finally {
       setPreviewLoading(false)
     }
-  }
+  }, [path, rootPath])
+
+  useEffect(() => {
+    if (!selectedId || !path) {
+      setPreviewContent(null)
+      return
+    }
+    fetchPreview(selectedId)
+  }, [selectedId, path, fetchPreview])
+
+  // 文件保存后，如果弹窗打开且是当前文件，刷新历史版本列表
+  useEffect(() => {
+    const handleFileSaved = (e: Event) => {
+      if (!open || !path) return
+      const detail = (e as CustomEvent<FileSavedEventDetail>).detail
+      if (!detail) return
+      if (detail.path !== path) return
+      if ((detail.rootPath ?? null) !== (rootPath ?? null)) return
+      fetchHistory()
+    }
+    window.addEventListener('colonynote:file-saved', handleFileSaved)
+    return () => window.removeEventListener('colonynote:file-saved', handleFileSaved)
+  }, [open, path, rootPath, fetchHistory])
 
   const handleRestore = async () => {
-    if (!selectedTimestamp || !path) return
+    if (!selectedId || !path) return
     if (isDirty) {
       const ok = window.confirm('恢复将覆盖当前未保存的更改，确定要继续吗？')
       if (!ok) return
@@ -149,8 +179,8 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
     setSuccess(null)
     try {
       const url = rootPath
-        ? `/api/files/history/restore?root=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&timestamp=${encodeURIComponent(selectedTimestamp)}`
-        : `/api/files/history/restore?path=${encodeURIComponent(path)}&timestamp=${encodeURIComponent(selectedTimestamp)}`
+        ? `/api/files/history/restore?root=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&id=${encodeURIComponent(selectedId)}`
+        : `/api/files/history/restore?path=${encodeURIComponent(path)}&id=${encodeURIComponent(selectedId)}`
       const res = await fetch(url, { method: 'POST' })
       const data = await res.json()
       if (data.error) {
@@ -165,6 +195,8 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
       setRestoring(false)
     }
   }
+
+  const selectedEntry = selectedId ? history.find(h => h.id === selectedId) : undefined
 
   const content = (
     <>
@@ -215,12 +247,12 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-1" ref={listRef}>
                 {history.map((entry) => {
-                  const isSelected = selectedTimestamp === entry.timestamp
+                  const isSelected = selectedId === entry.id
                   return (
                     <button
-                      key={entry.timestamp}
+                      key={entry.id}
                       type="button"
-                      onClick={() => setSelectedTimestamp(entry.timestamp)}
+                      onClick={() => setSelectedId(entry.id)}
                       className={cn(
                         'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
                         isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
@@ -250,11 +282,11 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
           <div className="flex flex-col flex-1 min-w-0 border rounded-md overflow-hidden">
             <div className="px-3 py-2 border-b bg-muted/50 flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">
-                {selectedTimestamp ? `版本 ${formatTimestamp(selectedTimestamp)}` : '预览'}
+                {selectedEntry ? `版本 ${formatTimestamp(selectedEntry.timestamp)}` : '预览'}
               </span>
-              {selectedTimestamp && (
+              {selectedEntry && (
                 <span className="text-[10px] text-muted-foreground">
-                  {history.find(h => h.timestamp === selectedTimestamp)?.source && formatSource(history.find(h => h.timestamp === selectedTimestamp)!.source)}
+                  {formatSource(selectedEntry.source)}
                 </span>
               )}
             </div>
@@ -282,7 +314,7 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
         </Button>
         <Button
           onClick={handleRestore}
-          disabled={!selectedTimestamp || restoring || history.length === 0}
+          disabled={!selectedId || restoring || history.length === 0}
           className="gap-1"
         >
           {restoring ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
