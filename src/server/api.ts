@@ -8,6 +8,7 @@ import type { ColonynoteConfig, DirConfig } from '../config.js'
 import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
 import { createSnapshot, listSnapshots, getSnapshotContent, restoreSnapshot, snapshotCurrentFile } from './history.js'
+import { diffLines } from 'diff'
 import { minimatch } from 'minimatch'
 import fuzzysort from 'fuzzysort'
 
@@ -848,6 +849,54 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
       return c.json({ success: true, content })
     } catch (e) {
       return c.json({ error: e instanceof Error ? e.message : 'Failed to restore snapshot' }, 500)
+    }
+  })
+
+  router.get('/history/diff', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    const pathParam = c.req.query('path')
+    const fromParam = c.req.query('from')
+    const toParam = c.req.query('to')
+    if (!pathParam || !fromParam || !toParam) return c.json({ error: 'path, from and to are required' }, 400)
+
+    let dirPath: string | null = null
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = findRootForPath(pathParam, config)
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const fullPath = path.join(dirPath, pathParam.startsWith('/') ? pathParam.slice(1) : pathParam)
+    if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
+
+    const getContent = async (idOrCurrent: string): Promise<string | null> => {
+      if (idOrCurrent === 'current') {
+        try {
+          return await fs.readFile(fullPath, 'utf-8')
+        } catch {
+          return null
+        }
+      }
+      return getSnapshotContent(dirPath!, pathParam, idOrCurrent)
+    }
+
+    try {
+      const [fromContent, toContent] = await Promise.all([getContent(fromParam), getContent(toParam)])
+      if (fromContent === null) return c.json({ error: 'from snapshot not found' }, 404)
+      if (toContent === null) return c.json({ error: 'to snapshot not found' }, 404)
+
+      const changes = diffLines(fromContent, toContent)
+      const diff = changes.map(ch => ({
+        added: !!ch.added,
+        removed: !!ch.removed,
+        value: ch.value,
+      }))
+      return c.json({ diff })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to compute diff' }, 500)
     }
   })
 

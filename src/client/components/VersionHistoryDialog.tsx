@@ -20,6 +20,14 @@ interface SnapshotEntry {
   size: number
 }
 
+interface DiffEntry {
+  added: boolean
+  removed: boolean
+  value: string
+}
+
+type DiffMode = 'content' | 'prev' | 'current'
+
 interface VersionHistoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -44,6 +52,7 @@ function formatTimestamp(timestamp: number): string {
 function formatSource(source: string): string {
   switch (source) {
     case 'manual': return '手动保存'
+    case 'manual-save': return '手动保存版本'
     case 'auto-save': return '自动保存'
     case 'pre-restore': return '恢复前备份'
     default: return source
@@ -68,6 +77,9 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
     if (typeof window === 'undefined') return false
     return window.innerWidth < 768
   })
+  const [diffMode, setDiffMode] = useState<DiffMode>('content')
+  const [diffData, setDiffData] = useState<DiffEntry[] | null>(null)
+  const [diffLoading, setDiffLoading] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -118,6 +130,8 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
       setHistory([])
       setSelectedId(null)
       setPreviewContent(null)
+      setDiffData(null)
+      setDiffMode('content')
       setError(null)
       setSuccess(null)
       return
@@ -146,13 +160,53 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
     }
   }, [path, rootPath])
 
+  const fetchDiff = useCallback(async (id: string, mode: 'prev' | 'current') => {
+    if (!path) return
+    setDiffLoading(true)
+    setError(null)
+    try {
+      // history 已按时间倒序排列，prev 是数组中 idx+1
+      const idx = history.findIndex(h => h.id === id)
+      const prev = mode === 'prev' ? history[idx + 1] : null
+      if (mode === 'prev' && !prev) {
+        setDiffData([])
+        setDiffLoading(false)
+        return
+      }
+      const fromId = mode === 'prev' ? prev!.id : 'current'
+      const url = rootPath
+        ? `/api/files/history/diff?root=${encodeURIComponent(rootPath)}&path=${encodeURIComponent(path)}&from=${encodeURIComponent(fromId)}&to=${encodeURIComponent(id)}`
+        : `/api/files/history/diff?path=${encodeURIComponent(path)}&from=${encodeURIComponent(fromId)}&to=${encodeURIComponent(id)}`
+      const res = await fetch(url)
+      const data = await res.json()
+      if (data.error) {
+        setDiffData(null)
+        setError(data.error)
+      } else {
+        setDiffData(data.diff || [])
+      }
+    } catch (e) {
+      setDiffData(null)
+      setError(e instanceof Error ? e.message : 'Failed to compute diff')
+    } finally {
+      setDiffLoading(false)
+    }
+  }, [path, rootPath, history])
+
   useEffect(() => {
     if (!selectedId || !path) {
       setPreviewContent(null)
+      setDiffData(null)
       return
     }
-    fetchPreview(selectedId)
-  }, [selectedId, path, fetchPreview])
+    if (diffMode === 'content') {
+      setDiffData(null)
+      fetchPreview(selectedId)
+    } else {
+      setPreviewContent(null)
+      fetchDiff(selectedId, diffMode)
+    }
+  }, [selectedId, diffMode, path, fetchPreview, fetchDiff])
 
   // 文件保存后，如果弹窗打开且是当前文件，刷新历史版本列表
   useEffect(() => {
@@ -197,6 +251,7 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
   }
 
   const selectedEntry = selectedId ? history.find(h => h.id === selectedId) : undefined
+  const hasPrev = selectedId ? history.findIndex(h => h.id === selectedId) < history.length - 1 : false
 
   const content = (
     <>
@@ -280,26 +335,102 @@ export function VersionHistoryDialog({ open, onOpenChange, path, rootPath, isDir
           </div>
 
           <div className="flex flex-col flex-1 min-w-0 border rounded-md overflow-hidden">
-            <div className="px-3 py-2 border-b bg-muted/50 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {selectedEntry ? `版本 ${formatTimestamp(selectedEntry.timestamp)}` : '预览'}
+            <div className="px-3 py-2 border-b bg-muted/50 flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground shrink-0">
+                {selectedEntry ? `版本 ${formatTimestamp(selectedEntry.timestamp)} · ${formatSource(selectedEntry.source)}` : '预览'}
               </span>
               {selectedEntry && (
-                <span className="text-[10px] text-muted-foreground">
-                  {formatSource(selectedEntry.source)}
-                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDiffMode('content')}
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-md transition-colors',
+                      diffMode === 'content' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    )}
+                  >
+                    内容
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiffMode('prev')}
+                    disabled={!hasPrev}
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-md transition-colors',
+                      diffMode === 'prev' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                      !hasPrev && 'opacity-50 cursor-not-allowed'
+                    )}
+                    title={hasPrev ? '与上一版本对比' : '这是最早版本，没有上一版本'}
+                  >
+                    上一版本对比
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiffMode('current')}
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-md transition-colors',
+                      diffMode === 'current' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    )}
+                  >
+                    当前对比
+                  </button>
+                </div>
               )}
             </div>
             <ScrollArea className="flex-1">
-              {previewLoading ? (
+              {diffMode === 'content' ? (
+                previewLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : previewContent !== null ? (
+                  <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words text-foreground/90">{previewContent}</pre>
+                ) : (
+                  <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                    选择版本查看内容
+                  </div>
+                )
+              ) : diffLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="size-5 animate-spin text-muted-foreground" />
                 </div>
-              ) : previewContent !== null ? (
-                <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words text-foreground/90">{previewContent}</pre>
+              ) : diffData && diffData.length === 0 ? (
+                <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                  这是最早版本，没有上一版本
+                </div>
+              ) : diffData && diffData.length > 0 ? (
+                <div className="p-2 text-xs font-mono">
+                  {(() => {
+                    let lineNum = 0
+                    return diffData.map((d, i) => {
+                      const lines = d.value.split('\n')
+                      // 如果 value 以 \n 结尾，最后一个元素是空字符串，跳过
+                      if (lines[lines.length - 1] === '') lines.pop()
+                      return lines.map((line, j) => {
+                        if (!d.added && !d.removed) lineNum += 1
+                        else if (d.added) lineNum += 1
+                        return (
+                          <div
+                            key={`${i}-${j}`}
+                            className={cn(
+                              'flex gap-2 px-2 py-0.5 whitespace-pre-wrap break-words',
+                              d.added && 'bg-green-500/15 text-green-700 dark:text-green-300',
+                              d.removed && 'bg-red-500/15 text-red-700 dark:text-red-300'
+                            )}
+                          >
+                            <span className="opacity-50 select-none w-4 shrink-0 text-right">
+                              {d.added ? '+' : d.removed ? '-' : ' '}
+                            </span>
+                            <span className="flex-1">{line || ' '}</span>
+                          </div>
+                        )
+                      })
+                    })
+                  })()}
+                </div>
               ) : (
                 <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-                  选择版本查看内容
+                  选择版本查看对比
                 </div>
               )}
             </ScrollArea>
