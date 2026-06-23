@@ -829,7 +829,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
   return (
     <div className="tiptap-editor-root tiptap-editor">
       <div className="tiptap-editor-toolbar-area">
-        {!isReadMode && !isMobile && <EditorToolbar editor={editor} variant="desktop" />}
+        {!isReadMode && !isMobile && <EditorToolbar editor={editor} variant="desktop" path={path} rootPath={rootPath} />}
       </div>
       <div className="tiptap-editor-scroll-area">
         {!isReadMode && (
@@ -839,7 +839,7 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
         )}
         <EditorContent editor={editor} className="tiptap-editor-content" />
       </div>
-      {isMobile && !isReadMode && <EditorToolbar editor={editor} variant="mobile" />}
+      {isMobile && !isReadMode && <EditorToolbar editor={editor} variant="mobile" path={path} rootPath={rootPath} />}
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { execFile, execFileSync } from 'child_process'
 import type { ColonynoteConfig, DirConfig } from '../config.js'
 import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
-import { createSnapshot, listSnapshots, getSnapshotContent, restoreSnapshot } from './history.js'
+import { createSnapshot, listSnapshots, getSnapshotContent, restoreSnapshot, snapshotCurrentFile } from './history.js'
 import { minimatch } from 'minimatch'
 import fuzzysort from 'fuzzysort'
 
@@ -823,7 +823,7 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     }
   })
 
- router.post('/history/restore', async (c) => {
+  router.post('/history/restore', async (c) => {
     const config = getConfig()
     const rootParam = c.req.query('root')
     const pathParam = c.req.query('path')
@@ -848,6 +848,33 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
       return c.json({ success: true, content })
     } catch (e) {
       return c.json({ error: e instanceof Error ? e.message : 'Failed to restore snapshot' }, 500)
+    }
+  })
+
+  router.post('/history/snapshot', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    const pathParam = c.req.query('path')
+    if (!pathParam) return c.json({ error: 'path parameter is required' }, 400)
+
+    let dirPath: string | null = null
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = findRootForPath(pathParam, config)
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const fullPath = path.join(dirPath, pathParam.startsWith('/') ? pathParam.slice(1) : pathParam)
+    if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
+
+    try {
+      const snapshot = await snapshotCurrentFile(dirPath, pathParam, 'manual-save')
+      if (!snapshot) return c.json({ error: 'File not found or unchanged' }, 400)
+      return c.json({ success: true, snapshot })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to create snapshot' }, 500)
     }
   })
 

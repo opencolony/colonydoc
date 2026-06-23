@@ -11,12 +11,17 @@ import {
   Copy,
   Undo2,
   Redo2,
+  BookmarkPlus,
+  Check,
+  Loader2,
 } from 'lucide-react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 interface EditorToolbarProps {
   editor: Editor | null
   variant?: 'desktop' | 'mobile'
+  path?: string | null
+  rootPath?: string | null
 }
 
 interface ToolbarButtonConfig {
@@ -155,7 +160,7 @@ const toolbarButtons: ToolbarButtonConfig[] = [
   },
 ]
 
-export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps) {
+export function EditorToolbar({ editor, variant = 'mobile', path, rootPath }: EditorToolbarProps) {
   if (!editor) {
     return null
   }
@@ -171,6 +176,35 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
   }, [editor])
 
   const [copied, setCopied] = useState(false)
+  const [savingVersion, setSavingVersion] = useState(false)
+  const [versionSaved, setVersionSaved] = useState(false)
+
+  const handleSaveVersion = useCallback(async () => {
+    if (!path || savingVersion) return
+    setSavingVersion(true)
+    setVersionSaved(false)
+    try {
+      const queryParams = new URLSearchParams()
+      if (rootPath) queryParams.set('root', rootPath)
+      queryParams.set('path', path)
+      const res = await fetch(`/api/files/history/snapshot?${queryParams.toString()}`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        console.error('Failed to save version:', data.error || res.statusText)
+        return
+      }
+      setVersionSaved(true)
+      setTimeout(() => setVersionSaved(false), 1500)
+      // 通知其他组件（如历史版本弹窗）刷新
+      window.dispatchEvent(new CustomEvent('colonynote:file-saved', {
+        detail: { path, rootPath: rootPath ?? null },
+      }))
+    } catch (e) {
+      console.error('Failed to save version:', e)
+    } finally {
+      setSavingVersion(false)
+    }
+  }, [path, rootPath, savingVersion])
 
   const handleCopyPlainText = useCallback(async () => {
     const { from, to } = editor.state.selection
@@ -248,6 +282,24 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
         aria-label="复制纯文本"
       >
         <Copy className="size-5" />
+      </button>
+      <div className="editor-toolbar-separator" />
+      <button
+        type="button"
+        contentEditable={false}
+        className={`editor-toolbar-btn ${versionSaved ? 'active' : ''}`}
+        onClick={handleSaveVersion}
+        disabled={!path || savingVersion}
+        title="保存版本"
+        aria-label="保存版本"
+      >
+        {savingVersion ? (
+          <Loader2 className="size-5 animate-spin" />
+        ) : versionSaved ? (
+          <Check className="size-5" />
+        ) : (
+          <BookmarkPlus className="size-5" />
+        )}
       </button>
     </div>
   )
