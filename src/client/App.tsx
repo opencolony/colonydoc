@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo, lazy, Suspense } from 'react'
-import { Plus, Code, Eye, BookOpen, Pencil, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor, FlaskConical } from 'lucide-react'
+import { Plus, Code, Eye, BookOpen, Pencil, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor, FlaskConical, History } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useTabs } from './hooks/useTabs'
 import { FileTree } from './components/FileTree'
@@ -14,6 +14,7 @@ import { SettingsDialog } from './components/SettingsDialog'
 import { AddDirDialog } from './components/AddDirDialog'
 import { EditDirDialog } from './components/EditDirDialog'
 import { GitCommitDialog } from './components/GitCommitDialog'
+import { VersionHistoryDialog } from './components/VersionHistoryDialog'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import {
@@ -257,6 +258,7 @@ function App() {
   const [editDirDialogOpen, setEditDirDialogOpen] = useState(false)
   const [editDirPath, setEditDirPath] = useState<string | null>(null)
   const [gitCommitDialogOpen, setGitCommitDialogOpen] = useState(false)
+  const [versionHistoryDialogOpen, setVersionHistoryDialogOpen] = useState(false)
   const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(() => {
     const saved = localStorage.getItem('colonynote-theme')
     if (saved === 'light' || saved === 'dark' || saved === 'system') return saved
@@ -315,6 +317,7 @@ function App() {
     closeAllTabs,
     closeGroupTabs,
     closeOtherGroupTabs,
+    restoreTab,
   } = useTabs({
     onSaveStart: () => {},
     onSave: () => {},
@@ -761,6 +764,12 @@ function App() {
     saveAllTabs()
   }, [saveAllTabs])
 
+  const handleRestoreVersion = useCallback((content: string) => {
+    if (!activeTabPath) return
+    restoreTab(activeTabPath, content)
+    setVersionHistoryDialogOpen(false)
+  }, [activeTabPath, restoreTab])
+
   const handleSetEditorMode = useCallback((mode: 'wysiwyg' | 'source' | 'read') => {
     setEditorMode(prev => {
       if (prev === mode) return prev
@@ -883,6 +892,11 @@ function App() {
           <Button variant="ghost" size="icon" onClick={() => setSearchDialogOpen(true)} className="size-11 min-h-11 min-w-11">
             <Search className="size-5" />
           </Button>
+          {activeTabPath && (
+            <Button variant="ghost" size="icon" onClick={() => setVersionHistoryDialogOpen(true)} title="历史版本" className="size-11 min-h-11 min-w-11">
+              <History className="size-5" />
+            </Button>
+          )}
           {/* 方案 C：双态主按钮 + 源码次级 */}
           <div className="inline-flex items-center rounded-lg bg-muted p-0.5 border border-border">
             <Button
@@ -1089,6 +1103,9 @@ function App() {
                       <Code className="size-3" />
                     </Button>
                   </div>
+                  <Button variant="ghost" size="icon" className="size-7 min-h-7 min-w-7" onClick={() => setVersionHistoryDialogOpen(true)} title="历史版本">
+                    <History className="size-3.5" />
+                  </Button>
                 </>
               ) : undefined}
             />
@@ -1124,6 +1141,7 @@ function App() {
                 )}
                 <div className="flex-1 overflow-hidden">
                   <TipTapEditor
+                    key={activeTab.key}
                     value={activeTab.content}
                     onChange={(val) => updateTabContent(activeTab.key, val)}
                     mode={editorMode}
@@ -1257,6 +1275,15 @@ function App() {
         open={gitCommitDialogOpen}
         onOpenChange={setGitCommitDialogOpen}
         rootPath={activeDir || undefined}
+      />
+
+      <VersionHistoryDialog
+        open={versionHistoryDialogOpen}
+        onOpenChange={setVersionHistoryDialogOpen}
+        path={activeTab?.path}
+        rootPath={activeTab?.rootPath}
+        isDirty={activeTab ? activeTab.content !== activeTab.lastSavedContent : false}
+        onRestore={handleRestoreVersion}
       />
     </div>
   )

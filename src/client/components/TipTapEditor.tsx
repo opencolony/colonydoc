@@ -1,4 +1,5 @@
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
+import { EditorState } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -594,13 +595,13 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     }
 
     const { from, to } = editor.state.selection
+    const wasEmpty = editor.isEmpty
 
     isInternalUpdateRef.current = true
     editor.commands.setContent(processedBody)
     lastNotifiedValueRef.current = value
 
     requestAnimationFrame(() => {
-      isInternalUpdateRef.current = false
       try {
         const maxPos = editor.state.doc.content.size
         const newFrom = Math.min(from, maxPos)
@@ -611,6 +612,22 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
       } catch {
         editor.commands.setTextSelection({ from: 0, to: 0 })
       }
+
+      // 外部内容加载完成后清空 undo/redo 历史，避免撤销回空文档或旧文件内容
+      if (wasEmpty && !editor.isEmpty) {
+        try {
+          const newState = EditorState.create({
+            schema: editor.schema,
+            doc: editor.state.doc,
+            plugins: editor.state.plugins,
+          })
+          editor.view.updateState(newState)
+        } catch {
+          // ignore reset history errors
+        }
+      }
+
+      isInternalUpdateRef.current = false
 
       // 切换文件时恢复滚动位置
       if (isPathChanged) {

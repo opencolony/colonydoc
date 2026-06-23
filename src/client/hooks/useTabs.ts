@@ -21,13 +21,14 @@ interface UseTabsReturn {
   openTab: (path: string, rootPath: string | null, options?: { asPreview?: boolean }) => void
   closeTab: (key: string) => void
   updateTabContent: (key: string, newContent: string, debounceMs?: number) => void
-  saveTab: (key: string) => void
-  saveAllTabs: () => void
-  isTabDirty: (key: string) => boolean
-  isTabPinned: (key: string) => boolean
-  getActiveTab: () => OpenTab | null
-  handleWsFileChange: (changedPath: string, rootPath: string | undefined, fetchFiles: () => void) => void
-  togglePin: (key: string) => void
+ saveTab: (key: string) => void
+ saveAllTabs: () => void
+ isTabDirty: (key: string) => boolean
+ isTabPinned: (key: string) => boolean
+ getActiveTab: () => OpenTab | null
+ restoreTab: (key: string, content: string) => void
+ handleWsFileChange: (changedPath: string, rootPath: string | undefined, fetchFiles: () => void) => void
+ togglePin: (key: string) => void
   closeOtherTabs: (key: string) => void
   closeRightTabs: (key: string) => void
   closeLeftTabs: (key: string) => void
@@ -71,7 +72,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     isPreview: false,
   }), [])
 
-  const doSave = useCallback(async (tab: OpenTab, rootPath: string | null) => {
+  const doSave = useCallback(async (tab: OpenTab, rootPath: string | null, source: string = 'auto-save') => {
     const sessionId = `${tab.path}:${Date.now()}`
     const tabKey = tab.key
 
@@ -91,9 +92,10 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
     optionsRef.current.onSaveStart?.(tab.path, sessionId)
 
     try {
-      const url = rootPath
-        ? `/api/files${tab.path}?root=${encodeURIComponent(rootPath)}`
-        : `/api/files${tab.path}`
+      const queryParams = new URLSearchParams()
+      if (rootPath) queryParams.set('root', rootPath)
+      queryParams.set('source', source)
+      const url = `/api/files${tab.path}?${queryParams.toString()}`
       const res = await fetch(url, {
         method: 'POST',
         body: tab.content,
@@ -451,7 +453,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
       saveTimeoutsRef.current.delete(key)
       const tab = tabsRef.current.get(key)
       if (tab) {
-        doSave(tab, tab.rootPath)
+        doSave(tab, tab.rootPath, 'auto-save')
       }
     }, debounceMs)
 
@@ -468,11 +470,11 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
 
     const tab = tabsRef.current.get(key)
     if (tab) {
-      doSave(tab, tab.rootPath)
+      doSave(tab, tab.rootPath, 'manual')
     }
   }, [doSave])
 
-  const saveAllTabs = useCallback(() => {
+ const saveAllTabs = useCallback(() => {
     const currentTabs = new Map(tabsRef.current)
     currentTabs.forEach((tab, key) => {
       const timeout = saveTimeoutsRef.current.get(key)
@@ -481,17 +483,39 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         saveTimeoutsRef.current.delete(key)
       }
       if (tab.content !== tab.lastSavedContent) {
-        doSave(tab, tab.rootPath)
+        doSave(tab, tab.rootPath, 'manual')
       }
     })
-  }, [doSave])
+ }, [doSave])
 
-  const getActiveTabSync = useCallback((): OpenTab | null => {
+  const restoreTab = useCallback((key: string, content: string) => {
+    const tab = tabsRef.current.get(key)
+    if (!tab) return
+
+    const timeout = saveTimeoutsRef.current.get(key)
+    if (timeout) {
+      clearTimeout(timeout)
+      saveTimeoutsRef.current.delete(key)
+    }
+
+    tabsRef.current.set(key, {
+      ...tab,
+      content,
+      lastSavedContent: content,
+      status: 'saved',
+      isPreview: false,
+    })
+    bump()
+
+    lastSelfSaveTimeRef.current.set(key, Date.now())
+  }, [bump])
+
+const getActiveTabSync = useCallback((): OpenTab | null => {
     if (!activeTabPath) return null
     return tabsRef.current.get(activeTabPath) || null
   }, [activeTabPath])
 
-  const handleWsFileChange = useCallback((changedPath: string, rootPath: string | undefined, fetchFiles: () => void) => {
+ const handleWsFileChange = useCallback((changedPath: string, rootPath: string | undefined, fetchFiles: () => void) => {
     const now = Date.now()
 
     // Find matching tab(s) by path + rootPath
@@ -692,12 +716,13 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
       const tab = tabsRef.current.get(key)
       return tab ? tab.content !== tab.lastSavedContent : false
     },
-    isTabPinned: (key: string) => {
-      const tab = tabsRef.current.get(key)
-      return tab ? tab.isPinned : false
-    },
-    getActiveTab: getActiveTabSync,
-    handleWsFileChange,
+   isTabPinned: (key: string) => {
+     const tab = tabsRef.current.get(key)
+     return tab ? tab.isPinned : false
+   },
+  getActiveTab: getActiveTabSync,
+  restoreTab,
+  handleWsFileChange,
     togglePin,
     closeOtherTabs,
     closeRightTabs,

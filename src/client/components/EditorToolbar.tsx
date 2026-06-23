@@ -9,6 +9,8 @@ import {
   Quote,
   Code,
   Copy,
+  Undo2,
+  Redo2,
 } from 'lucide-react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
@@ -158,6 +160,16 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
     return null
   }
 
+  // 强制工具栏在每次 editor transaction 后重新渲染，确保 undo/redo 可用状态及时更新
+  const [, forceUpdate] = useState({})
+  useEffect(() => {
+    const handler = () => forceUpdate({})
+    editor.on('transaction', handler)
+    return () => {
+      editor.off('transaction', handler)
+    }
+  }, [editor])
+
   const [copied, setCopied] = useState(false)
 
   const handleCopyPlainText = useCallback(async () => {
@@ -184,6 +196,29 @@ export function EditorToolbar({ editor, variant = 'mobile' }: EditorToolbarProps
 
   return (
     <div className={`editor-toolbar editor-toolbar-${variant}`}>
+      <button
+        type="button"
+        contentEditable={false}
+        className="editor-toolbar-btn disabled:opacity-40 disabled:cursor-not-allowed"
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!editor.isEditable || !editor.can().undo()}
+        title="撤销"
+        aria-label="撤销"
+      >
+        <Undo2 className="size-5" />
+      </button>
+      <button
+        type="button"
+        contentEditable={false}
+        className="editor-toolbar-btn disabled:opacity-40 disabled:cursor-not-allowed"
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!editor.isEditable || !editor.can().redo()}
+        title="恢复"
+        aria-label="恢复"
+      >
+        <Redo2 className="size-5" />
+      </button>
+      <div className="editor-toolbar-separator" />
       <HeadingDropdown editor={editor} variant={variant} />
       {toolbarButtons.map((btn) => {
         const Icon = btn.icon

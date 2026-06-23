@@ -7,6 +7,7 @@ import { execFile, execFileSync } from 'child_process'
 import type { ColonynoteConfig, DirConfig } from '../config.js'
 import { saveConfig, DEFAULT_SENSITIVE_PATHS } from '../config.js'
 import { IgnoreMatcher } from './ignore.js'
+import { createSnapshot, listSnapshots, getSnapshotContent, restoreSnapshot } from './history.js'
 import { minimatch } from 'minimatch'
 import fuzzysort from 'fuzzysort'
 
@@ -709,7 +710,7 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
     })
   }
 
-  router.get('/git/status', async (c) => {
+ router.get('/git/status', async (c) => {
     const config = getConfig()
     const rootParam = c.req.query('root')
     let dirPath: string | null = null
@@ -765,10 +766,98 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
       })
     } catch (e) {
       return c.json({ error: e instanceof Error ? e.message : 'Failed to get git status' }, 500)
+   }
+ })
+
+  router.get('/history', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    const pathParam = c.req.query('path')
+    if (!pathParam) return c.json({ error: 'path parameter is required' }, 400)
+
+    let dirPath: string | null = null
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = findRootForPath(pathParam, config)
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const fullPath = path.join(dirPath, pathParam.startsWith('/') ? pathParam.slice(1) : pathParam)
+    if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
+
+    try {
+      const snapshots = await listSnapshots(dirPath, pathParam)
+      return c.json({ history: snapshots })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to list history' }, 500)
     }
   })
 
-  router.post('/git/commit', async (c) => {
+  router.get('/history/version', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    const pathParam = c.req.query('path')
+    const timestampParam = c.req.query('timestamp')
+    if (!pathParam || !timestampParam) return c.json({ error: 'path and timestamp are required' }, 400)
+
+    let dirPath: string | null = null
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = findRootForPath(pathParam, config)
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const fullPath = path.join(dirPath, pathParam.startsWith('/') ? pathParam.slice(1) : pathParam)
+    if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
+
+    const timestamp = parseInt(timestampParam, 10)
+    if (Number.isNaN(timestamp)) return c.json({ error: 'Invalid timestamp' }, 400)
+
+    try {
+      const content = await getSnapshotContent(dirPath, pathParam, timestamp)
+      if (content === null) return c.json({ error: 'Snapshot not found' }, 404)
+      return c.json({ content })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to get snapshot' }, 500)
+    }
+  })
+
+  router.post('/history/restore', async (c) => {
+    const config = getConfig()
+    const rootParam = c.req.query('root')
+    const pathParam = c.req.query('path')
+    const timestampParam = c.req.query('timestamp')
+    if (!pathParam || !timestampParam) return c.json({ error: 'path and timestamp are required' }, 400)
+
+    let dirPath: string | null = null
+    if (rootParam) {
+      dirPath = validateRoot(rootParam, config)
+      if (!dirPath) return c.json({ error: 'Invalid root' }, 400)
+    } else {
+      dirPath = findRootForPath(pathParam, config)
+    }
+    if (!dirPath) return c.json({ error: 'No root directory' }, 400)
+
+    const fullPath = path.join(dirPath, pathParam.startsWith('/') ? pathParam.slice(1) : pathParam)
+    if (!isAllowed(fullPath, config)) return c.json({ error: 'Access denied' }, 403)
+
+    const timestamp = parseInt(timestampParam, 10)
+    if (Number.isNaN(timestamp)) return c.json({ error: 'Invalid timestamp' }, 400)
+
+    try {
+      const content = await restoreSnapshot(dirPath, pathParam, timestamp)
+      if (content === null) return c.json({ error: 'Snapshot not found' }, 404)
+      return c.json({ success: true, content })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : 'Failed to restore snapshot' }, 500)
+    }
+  })
+
+ router.post('/git/commit', async (c) => {
     const config = getConfig()
     const rootParam = c.req.query('root')
     let dirPath: string | null = null
@@ -1030,9 +1119,26 @@ export function createFileRouter(holder: ConfigHolder, env: 'development' | 'pro
       }
     }
 
+    let existingContent: string | null = null
+    try {
+      existingContent = await fs.readFile(fullPath, 'utf-8')
+    } catch {
+      existingContent = null
+    }
+
+    const content = await c.req.text()
+
+    if (existingContent !== null && existingContent !== content) {
+      const source = c.req.query('source') || 'auto-save'
+      try {
+        await createSnapshot(dirPath, filePath, existingContent, source)
+      } catch (snapshotError) {
+        console.error('Failed to create snapshot:', snapshotError)
+      }
+    }
+
     try {
       await fs.mkdir(path.dirname(fullPath), { recursive: true })
-      const content = await c.req.text()
       await fs.writeFile(fullPath, content, 'utf-8')
       return c.json({ success: true })
     } catch (e) {
