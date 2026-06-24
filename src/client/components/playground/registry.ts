@@ -10,5 +10,19 @@ import { fileItemMenuStylesCase } from './cases/file-item-menu-styles'
 import { frontmatterPanelStylesCase } from './cases/frontmatter-panel-styles'
 import { markdownRenderStylesCase } from './cases/markdown-render-styles'
 import { readModeToggleCase } from './cases/read-mode-toggle'
+import { topbarRedesignCase } from './cases/topbar-redesign'
 
-export const playgroundCases: PlaygroundCase[] = [tabbarStylesCase, tabbarCompactCase, dirSwitcherStylesCase, emptyStateStylesCase, editDirDialogStylesCase, addDirDialogStylesCase, addDirSearchStylesCase, fileItemMenuStylesCase, frontmatterPanelStylesCase, markdownRenderStylesCase, readModeToggleCase]
+export const playgroundCases: PlaygroundCase[] = [
+  tabbarStylesCase,
+  tabbarCompactCase,
+  dirSwitcherStylesCase,
+  emptyStateStylesCase,
+  editDirDialogStylesCase,
+  addDirDialogStylesCase,
+  addDirSearchStylesCase,
+  fileItemMenuStylesCase,
+  frontmatterPanelStylesCase,
+  markdownRenderStylesCase,
+  readModeToggleCase,
+  topbarRedesignCase,
+]

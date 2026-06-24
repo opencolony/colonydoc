@@ -101,6 +101,8 @@ interface TipTapEditorProps {
   rootPath?: string | null
   scrollPosition?: number
   onLinkClick?: (path: string) => void
+  /** 编辑器实例就绪 / 卸载时回调（用于大纲等外部组件同步状态） */
+  onEditorReady?: (editor: Editor | null) => void
 }
 
 function MermaidCodeBlock({ node, updateAttributes, selected, editor, getPos }: NodeViewProps) {
@@ -297,7 +299,7 @@ const CustomCodeBlock = CodeBlockLowlight.extend({
   },
 }).configure({ lowlight })
 
-export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, rootPath, scrollPosition, onLinkClick }: TipTapEditorProps) {
+export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, path, rootPath, scrollPosition, onLinkClick, onEditorReady }: TipTapEditorProps) {
   // 同步更新图片渲染上下文，供 addNodeView 使用
   imageRenderContext.path = path ?? null
   imageRenderContext.rootPath = rootPath ?? null
@@ -558,6 +560,15 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
     },
   })
   editorRef.current = editor
+
+  // 通知外部编辑器已就绪 / 卸载
+  useEffect(() => {
+    onEditorReady?.(editor ?? null)
+    return () => {
+      onEditorReady?.(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor])
 
   // 当 path/rootPath 变化时，触发所有 image NodeView 更新 src
   useEffect(() => {

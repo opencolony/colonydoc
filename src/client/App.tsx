@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo, lazy, Suspense } from 'react'
-import { Plus, Code, Eye, BookOpen, Pencil, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor, FlaskConical, History } from 'lucide-react'
+import { Plus, List, FileText, Folder, FolderOpen, Search, X, Settings, AlertCircle, Sun, Moon, Monitor, FlaskConical, History, MoreVertical, MoreHorizontal, PanelRight } from 'lucide-react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useTabs } from './hooks/useTabs'
 import { FileTree } from './components/FileTree'
@@ -15,6 +15,9 @@ import { AddDirDialog } from './components/AddDirDialog'
 import { EditDirDialog } from './components/EditDirDialog'
 import { GitCommitDialog } from './components/GitCommitDialog'
 import { VersionHistoryDialog } from './components/VersionHistoryDialog'
+import { OutlinePanel } from './components/OutlinePanel'
+import { ModeToggleCompact } from './components/ModeToggle'
+import { OverflowMenu, OverflowMenuItem, OverflowMenuSeparator } from './components/OverflowMenu'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent } from './components/ui/sheet'
 import {
@@ -28,7 +31,11 @@ import {
   AlertDialogTitle,
 } from './components/ui/alert-dialog'
 import { cn } from './lib/utils'
+import type { Editor as TipTapEditorType } from '@tiptap/react'
 import type { DirConfig } from './lib/types'
+
+// 给 editorInstance 状态用的本地类型别名，避免与 lucide 的 Editor 等冲突
+type Editor = TipTapEditorType
 
 // Lazy load Playground in dev only — entire chunk is tree-shaken in production
 const PlaygroundLazy = import.meta.env.DEV
@@ -271,12 +278,36 @@ function App() {
   // Close tab confirmation state
   const [closingTabPath, setClosingTabPath] = useState<string | null>(null)
 
+  // 大纲面板可见性（持久化）
+  const [outlineVisible, setOutlineVisible] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('colonynote-outline-visible') === 'true'
+  })
+  useEffect(() => {
+    localStorage.setItem('colonynote-outline-visible', String(outlineVisible))
+  }, [outlineVisible])
+
+  // TipTap 编辑器实例引用（用于大纲）
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
+  const handleEditorReady = useCallback((editor: Editor | null) => {
+    setEditorInstance(editor)
+  }, [])
+
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window === 'undefined') return 260
     const saved = localStorage.getItem('sidebar-width')
     return saved ? parseInt(saved, 10) : 260
   })
   const isResizingRef = useRef(false)
+
+  // 大纲面板宽度（桌面端）：默认 260，范围 200-400，持久化到 localStorage
+  const [outlineWidth, setOutlineWidth] = useState(() => {
+    if (typeof window === 'undefined') return 260
+    const saved = localStorage.getItem('outline-width')
+    const n = saved ? parseInt(saved, 10) : 260
+    return Math.min(400, Math.max(200, isNaN(n) ? 260 : n))
+  })
+  const isOutlineResizingRef = useRef(false)
   const fetchingRef = useRef(false)
   const loadingRef = useRef<string | null>(null)
   const tabScrollPositionsRef = useRef<Map<string, number>>(new Map())
@@ -781,30 +812,6 @@ function App() {
     })
   }, [activeTabPath])
 
-  /** 主按钮：在阅读/编辑之间切换 */
-  const handleToggleReadWysiwyg = useCallback(() => {
-    setEditorMode(prev => {
-      const next = prev === 'read' ? 'wysiwyg' : 'read'
-      const editorContainer = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
-      if (editorContainer && activeTabPath) {
-        tabScrollPositionsRef.current.set(activeTabPath, editorContainer.scrollTop)
-      }
-      return next
-    })
-  }, [activeTabPath])
-
-  /** 源码按钮：进入/退出源码模式 */
-  const handleToggleSource = useCallback(() => {
-    setEditorMode(prev => {
-      const next = prev === 'source' ? 'wysiwyg' : 'source'
-      const editorContainer = document.querySelector('.tiptap-editor-scroll-area') || document.querySelector('.editor-textarea')
-      if (editorContainer && activeTabPath) {
-        tabScrollPositionsRef.current.set(activeTabPath, editorContainer.scrollTop)
-      }
-      return next
-    })
-  }, [activeTabPath])
-
   const handleToggleTheme = useCallback(() => {
     setThemeMode(prev => {
       const next = prev === 'light' ? 'dark' : prev === 'dark' ? 'system' : 'light'
@@ -841,21 +848,55 @@ function App() {
     }
   }, [])
 
+  // 大纲面板拖拽：从右侧边界往左拖 → 减小宽度，往右拖 → 增大宽度
+  const handleOutlineResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    isOutlineResizingRef.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  const handleOutlineResizeEnd = useCallback(() => {
+    if (isOutlineResizingRef.current) {
+      isOutlineResizingRef.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      setOutlineWidth(w => {
+        localStorage.setItem('outline-width', w.toString())
+        return w
+      })
+    }
+  }, [])
+
   useEffect(() => {
     const handleResizeMove = (e: MouseEvent) => {
-      if (!isResizingRef.current) return
-      const newWidth = Math.max(200, Math.min(600, e.clientX))
-      setSidebarWidth(newWidth)
+      if (isResizingRef.current) {
+        const newWidth = Math.max(200, Math.min(600, e.clientX))
+        setSidebarWidth(newWidth)
+        return
+      }
+      if (isOutlineResizingRef.current) {
+        // 大纲面板在编辑器右侧：从右侧往左拖，宽度 = viewport - clientX
+        const newWidth = Math.max(200, Math.min(400, window.innerWidth - e.clientX))
+        setOutlineWidth(newWidth)
+        return
+      }
+    }
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (isResizingRef.current) handleResizeEnd()
+      if (isOutlineResizingRef.current) handleOutlineResizeEnd()
     }
 
     window.addEventListener('mousemove', handleResizeMove)
-    window.addEventListener('mouseup', handleResizeEnd)
+    window.addEventListener('mouseup', handleMouseUp)
 
     return () => {
       window.removeEventListener('mousemove', handleResizeMove)
-      window.removeEventListener('mouseup', handleResizeEnd)
+      window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [handleResizeEnd])
+  }, [handleResizeEnd, handleOutlineResizeEnd])
 
   const activeTab = getActiveTab()
   const fileName = activeTab ? activeTab.path.split('/').pop() : null
@@ -882,52 +923,58 @@ function App() {
   return (
     <div className="flex flex-col h-full">
       {isMobile && (
-        <header className="flex items-center px-4 py-3 border-b border-border bg-background md:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setDrawerVisible(true)} className="size-11 min-h-11 min-w-11">
+        <header className="flex items-center gap-1 px-2 py-2 border-b border-border bg-background md:hidden">
+          <Button variant="ghost" size="icon" onClick={() => setDrawerVisible(true)} className="size-9 min-h-9 min-w-9" title="文件树">
             <List className="size-5" />
           </Button>
-          <div className="flex-1 text-base font-semibold text-center truncate mx-4">
+          <div className="flex-1 text-sm font-semibold text-center truncate px-2 min-w-0">
             {fileName || 'ColonyNote'}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setSearchDialogOpen(true)} className="size-11 min-h-11 min-w-11">
-            <Search className="size-5" />
-          </Button>
-          {activeTabPath && (
-            <Button variant="ghost" size="icon" onClick={() => setVersionHistoryDialogOpen(true)} title="历史版本" className="size-11 min-h-11 min-w-11">
-              <History className="size-5" />
-            </Button>
-          )}
-          {/* 方案 C：双态主按钮 + 源码次级 */}
-          <div className="inline-flex items-center rounded-lg bg-muted p-0.5 border border-border">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleReadWysiwyg}
-              title={editorMode === 'read' ? '切换到编辑模式' : '切换到阅读模式'}
-              className={cn(
-                'flex items-center justify-center size-8 rounded-md transition-all duration-150',
-                editorMode === 'read'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {editorMode === 'read' ? <BookOpen className="size-4" /> : <Pencil className="size-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleSource}
-              title="源码模式"
-              className={cn(
-                'flex items-center justify-center size-8 rounded-md transition-all duration-150',
-                editorMode === 'source'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <Code className="size-4" />
-            </Button>
-          </div>
+          <ModeToggleCompact mode={editorMode} onChange={handleSetEditorMode} size="md" />
+          {/* 方案 A：极简顶栏 + ⋯ 溢出菜单 */}
+          <OverflowMenu
+            title="更多"
+            triggerClassName="size-9 min-h-9 min-w-9 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground ml-0.5"
+            trigger={<MoreVertical className="size-5" />}
+            contentClassName="w-60"
+          >
+            <OverflowMenuItem
+              icon={<Search className="size-4" />}
+              label="搜索"
+              shortcut="⌘K"
+              onSelect={() => setSearchDialogOpen(true)}
+            />
+            {activeTabPath && (
+              <OverflowMenuItem
+                icon={<PanelRight className="size-4" />}
+                label={outlineVisible ? '隐藏大纲' : '显示大纲'}
+                active={outlineVisible}
+                onSelect={() => setOutlineVisible(v => !v)}
+              />
+            )}
+            {activeTabPath && (
+              <OverflowMenuItem
+                icon={<History className="size-4" />}
+                label="历史版本"
+                onSelect={() => setVersionHistoryDialogOpen(true)}
+              />
+            )}
+            <OverflowMenuSeparator />
+            <OverflowMenuItem
+              icon={
+                themeMode === 'dark' ? <Sun className="size-4" /> :
+                themeMode === 'system' ? <Monitor className="size-4" /> :
+                <Moon className="size-4" />
+              }
+              label={`主题：${themeMode === 'light' ? '浅色' : themeMode === 'dark' ? '深色' : '跟随系统'}`}
+              onSelect={handleToggleTheme}
+            />
+            <OverflowMenuItem
+              icon={<Settings className="size-4" />}
+              label="设置"
+              onSelect={() => setSettingsDialogOpen(true)}
+            />
+          </OverflowMenu>
         </header>
       )}
 
@@ -1069,43 +1116,49 @@ function App() {
                   )}>
                     {activeTab?.status === 'saving' ? '保存中...' : activeTab?.status === 'saved' ? '已保存' : activeTab?.status === 'error' ? '保存失败' : ''}
                   </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "size-7 min-h-7 min-w-7",
+                      outlineVisible && "bg-accent text-accent-foreground"
+                    )}
+                    onClick={() => setOutlineVisible(v => !v)}
+                    title={outlineVisible ? '隐藏大纲' : '显示大纲'}
+                    aria-pressed={outlineVisible}
+                  >
+                    <PanelRight className="size-3.5" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="size-7 min-h-7 min-w-7" onClick={() => setSearchDialogOpen(true)} title="搜索">
                     <Search className="size-3.5" />
                   </Button>
-                  {/* 方案 C：双态主按钮 + 源码次级 */}
-                  <div className="inline-flex items-center rounded-md bg-muted p-0.5 border border-border">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'flex items-center justify-center size-5 rounded transition-all duration-150',
-                        editorMode === 'read'
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      )}
-                      onClick={handleToggleReadWysiwyg}
-                      title={editorMode === 'read' ? '切换到编辑模式' : '切换到阅读模式'}
-                    >
-                      {editorMode === 'read' ? <BookOpen className="size-3" /> : <Pencil className="size-3" />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'flex items-center justify-center size-5 rounded transition-all duration-150',
-                        editorMode === 'source'
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      )}
-                      onClick={handleToggleSource}
-                      title="源码模式"
-                    >
-                      <Code className="size-3" />
-                    </Button>
-                  </div>
+                  <ModeToggleCompact mode={editorMode} onChange={handleSetEditorMode} size="sm" />
                   <Button variant="ghost" size="icon" className="size-7 min-h-7 min-w-7" onClick={() => setVersionHistoryDialogOpen(true)} title="历史版本">
                     <History className="size-3.5" />
                   </Button>
+                  {/* 方案 A：桌面端 ⋯ 收纳主题/设置 */}
+                  <OverflowMenu
+                    title="更多"
+                    triggerClassName="size-7 min-h-7 min-w-7 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    trigger={<MoreHorizontal className="size-4" />}
+                    contentClassName="w-56"
+                  >
+                    <OverflowMenuItem
+                      icon={
+                        themeMode === 'dark' ? <Sun className="size-4" /> :
+                        themeMode === 'system' ? <Monitor className="size-4" /> :
+                        <Moon className="size-4" />
+                      }
+                      label={`主题：${themeMode === 'light' ? '浅色' : themeMode === 'dark' ? '深色' : '跟随系统'}`}
+                      onSelect={handleToggleTheme}
+                    />
+                    <OverflowMenuSeparator />
+                    <OverflowMenuItem
+                      icon={<Settings className="size-4" />}
+                      label="设置"
+                      onSelect={() => setSettingsDialogOpen(true)}
+                    />
+                  </OverflowMenu>
                 </>
               ) : undefined}
             />
@@ -1152,8 +1205,31 @@ function App() {
                       saveScrollPosition()
                       openTab(linkPath, activeTab.rootPath)
                     }}
+                    onEditorReady={handleEditorReady}
                   />
                 </div>
+              </div>
+            )}
+            {!isMobile && outlineVisible && activeTab && (
+              <div className="flex shrink-0">
+                <div
+                  onMouseDown={handleOutlineResizeStart}
+                  className="w-2 -mr-1 cursor-col-resize flex items-center justify-center group z-10"
+                  title="拖动调整大纲宽度"
+                >
+                  <div className="w-1 h-8 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+                </div>
+                <aside
+                  style={{ width: outlineWidth }}
+                  className="shrink-0 border-l border-border bg-background overflow-hidden"
+                >
+                  <OutlinePanel
+                    editor={editorInstance}
+                    mode={editorMode}
+                    content={activeTab.content}
+                    variant="desktop"
+                  />
+                </aside>
               </div>
             )}
           </div>
@@ -1285,6 +1361,23 @@ function App() {
         isDirty={activeTab ? activeTab.content !== activeTab.lastSavedContent : false}
         onRestore={handleRestoreVersion}
       />
+
+      {/* 移动端大纲 Sheet */}
+      {isMobile && (
+        <Sheet open={outlineVisible} onOpenChange={setOutlineVisible}>
+          <SheetContent side="right" className="p-0 w-[300px] max-w-[85vw]">
+            {activeTab && (
+              <OutlinePanel
+                editor={editorInstance}
+                mode={editorMode}
+                content={activeTab.content}
+                variant="mobile"
+                onClose={() => setOutlineVisible(false)}
+              />
+            )}
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   )
 }

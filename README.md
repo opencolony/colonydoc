@@ -24,6 +24,7 @@ Edit server-side Markdown files directly in your browser — no upload, no downl
 - **Mermaid Diagrams** — Render flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, pie charts, and user journey maps.
 - **LaTeX Math** — Full support for mathematical expressions via KaTeX.
 - **Code Highlighting** — Syntax highlighting for 15+ programming languages with copy-to-clipboard.
+- **Outline Navigation** — Toggleable document outline panel with H1–H6 multi-level headings, click-to-jump and scroll-spy highlighting; works across all editing modes.
 - **Full-text Search** — Search across all your documents with ripgrep-powered fuzzy matching.
 - **Multi-directory Support** — Manage multiple document directories simultaneously, each with its own file tree.
 - **Multi-tab** — Open multiple files in tabs, with dirty-state indicators and auto-save.
