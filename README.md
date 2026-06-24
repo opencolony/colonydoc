@@ -12,8 +12,43 @@ Edit server-side Markdown files directly in your browser — no upload, no downl
 
 ## Screenshots
 
-<table style="min-width: 50px;">
-<colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><td colspan="1" rowspan="1"><img src="screenshots/light-editor.png" alt="Light Theme Editor" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/dark-editor.png" alt="Dark Theme Editor" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>Light Theme</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>Dark Theme</p></td></tr><tr><td colspan="1" rowspan="1"><img src="screenshots/search.png" alt="Full-text Search" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/mobile-editor.png" alt="Mobile Editor" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>Full-text Search</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>Mobile Editor</p></td></tr></tbody>
+### Editor — Light & Dark Themes
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/light-editor.png" alt="Light Theme Editor"></td>
+    <td width="50%"><img src="screenshots/dark-editor.png" alt="Dark Theme Editor"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Light Theme</b> — file tree, tabs, and outline panel with a 380px draggable width</sub></td>
+    <td align="center"><sub><b>Dark Theme</b> — same layout, follows system / light / dark</sub></td>
+  </tr>
+</table>
+
+### Outline Navigation & Version History
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/outline.png" alt="Outline Panel"></td>
+    <td width="50%"><img src="screenshots/version-history.png" alt="Version History Diff"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Outline Panel</b> — H1–H6 headings, click-to-jump, scroll-spy highlighting; drag the left edge to resize (200–400px)</sub></td>
+    <td align="center"><sub><b>Version History</b> — local snapshots with side-by-side diff (previous / current)</sub></td>
+  </tr>
+</table>
+
+### Search & Mobile
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/search.png" alt="Full-text Search"></td>
+    <td width="50%"><img src="screenshots/mobile-editor.png" alt="Mobile Editor"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Full-text Search</b> — ripgrep-powered fuzzy matching (⌘K)</sub></td>
+    <td align="center"><sub><b>Mobile-first UI</b> — 4-item top bar with ⋯ overflow menu, bottom sheet outline</sub></td>
+  </tr>
 </table>
 
 ## Features

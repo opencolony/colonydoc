@@ -12,8 +12,43 @@
 
 ## 界面预览
 
-<table style="min-width: 50px;">
-<colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><td colspan="1" rowspan="1"><img src="screenshots/light-editor.png" alt="浅色主题编辑器" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/dark-editor.png" alt="深色主题编辑器" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>浅色主题</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>深色主题</p></td></tr><tr><td colspan="1" rowspan="1"><img src="screenshots/search.png" alt="全文搜索" width="100%"></td><td colspan="1" rowspan="1"><img src="screenshots/mobile-editor.png" alt="移动端编辑器" width="100%"></td></tr><tr><td colspan="1" rowspan="1" style="text-align: center;"><p>全文搜索</p></td><td colspan="1" rowspan="1" style="text-align: center;"><p>移动端编辑器</p></td></tr></tbody>
+### 编辑器 — 浅色与深色主题
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/light-editor.png" alt="浅色主题编辑器"></td>
+    <td width="50%"><img src="screenshots/dark-editor.png" alt="深色主题编辑器"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>浅色主题</b> — 文件树、标签页、大纲面板（宽度可拖拽至 380px）</sub></td>
+    <td align="center"><sub><b>深色主题</b> — 同一布局，支持浅色 / 深色 / 跟随系统</sub></td>
+  </tr>
+</table>
+
+### 大纲导航与历史版本
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/outline.png" alt="大纲面板"></td>
+    <td width="50%"><img src="screenshots/version-history.png" alt="历史版本 diff"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>大纲面板</b> — H1-H6 标题、点击跳转、scroll spy 高亮；左侧可拖拽调整宽度（200-400px）</sub></td>
+    <td align="center"><sub><b>历史版本</b> — 本地快照，支持与上一版本 / 当前内容双栏 diff 对比</sub></td>
+  </tr>
+</table>
+
+### 搜索与移动端
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/search.png" alt="全文搜索"></td>
+    <td width="50%"><img src="screenshots/mobile-editor.png" alt="移动端编辑器"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>全文搜索</b> — 基于 ripgrep 的模糊匹配（⌘K）</sub></td>
+    <td align="center"><sub><b>移动端优先</b> — 顶栏 4 项精简 + ⋯ 溢出菜单，大纲用底部 Sheet</sub></td>
+  </tr>
 </table>
 
 ## 功能特性
