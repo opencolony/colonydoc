@@ -25,6 +25,7 @@ Edit server-side Markdown files directly in your browser — no upload, no downl
 - **LaTeX Math** — Full support for mathematical expressions via KaTeX.
 - **Code Highlighting** — Syntax highlighting for 15+ programming languages with copy-to-clipboard.
 - **Outline Navigation** — Toggleable document outline panel with H1–H6 multi-level headings, click-to-jump and scroll-spy highlighting; works across all editing modes.
+- **Version History** — Local snapshot history with auto-save and manual checkpoints. Side-by-side diff view compares snapshots with the previous version and the current content for easy review and restoration.
 - **Full-text Search** — Search across all your documents with ripgrep-powered fuzzy matching.
 - **Multi-directory Support** — Manage multiple document directories simultaneously, each with its own file tree.
 - **Multi-tab** — Open multiple files in tabs, with dirty-state indicators and auto-save.
