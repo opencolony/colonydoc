@@ -1270,6 +1270,16 @@
   @apply bg-muted/20;
 }
 
+/* Readonly (阅读模式) — 两列布局，无操作列 */
+.frontmatter-panel-readonly .frontmatter-key-input,
+.frontmatter-panel-readonly .frontmatter-value-input {
+  @apply cursor-default;
+}
+
+.frontmatter-table-readonly-cols {
+  @apply grid grid-cols-[120px_1fr] gap-0;
+}
+
 /* ============================================
    Outline Panel — 大纲导航
    ============================================ */

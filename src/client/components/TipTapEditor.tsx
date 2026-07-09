@@ -843,9 +843,13 @@ export function TipTapEditor({ value, onChange, mode, placeholder, readOnly, pat
         {!isReadMode && !isMobile && <EditorToolbar editor={editor} variant="desktop" path={path} rootPath={rootPath} />}
       </div>
       <div className="tiptap-editor-scroll-area">
-        {!isReadMode && (
+        {(!isReadMode || displayFrontmatter) && (
           <div className="frontmatter-panel-wrapper">
-            <FrontmatterPanel rawFrontmatter={displayFrontmatter} onFrontmatterChange={handleFrontmatterChange} />
+            <FrontmatterPanel
+              rawFrontmatter={displayFrontmatter}
+              onFrontmatterChange={handleFrontmatterChange}
+              readOnly={isReadMode}
+            />
           </div>
         )}
         <EditorContent editor={editor} className="tiptap-editor-content" />
