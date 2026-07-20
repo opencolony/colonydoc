@@ -144,7 +144,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
 
     // Update URL hash
     if (rootPath) {
-      window.location.hash = `${rootPath}:${path}`
+      window.location.hash = `${rootPath}::${path}`
     } else {
       window.location.hash = path
     }
@@ -245,7 +245,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         // Preserve rootPath in URL hash
         const newTab = tabsRef.current.get(newKey)
         if (newTab?.rootPath) {
-          window.location.hash = `${newTab.rootPath}:${newTab.path}`
+          window.location.hash = `${newTab.rootPath}::${newTab.path}`
         } else if (newTab) {
           window.location.hash = newTab.path
         }
@@ -270,7 +270,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         setActiveTabPath(key)
         const tab = tabsRef.current.get(key)
         if (tab?.rootPath) {
-          window.location.hash = `${tab.rootPath}:${tab.path}`
+          window.location.hash = `${tab.rootPath}::${tab.path}`
         } else if (tab) {
           window.location.hash = tab.path
         }
@@ -296,7 +296,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         setActiveTabPath(key)
         const tab = tabsRef.current.get(key)
         if (tab?.rootPath) {
-          window.location.hash = `${tab.rootPath}:${tab.path}`
+          window.location.hash = `${tab.rootPath}::${tab.path}`
         } else if (tab) {
           window.location.hash = tab.path
         }
@@ -322,7 +322,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         setActiveTabPath(key)
         const tab = tabsRef.current.get(key)
         if (tab?.rootPath) {
-          window.location.hash = `${tab.rootPath}:${tab.path}`
+          window.location.hash = `${tab.rootPath}::${tab.path}`
         } else if (tab) {
           window.location.hash = tab.path
         }
@@ -365,7 +365,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         setActiveTabPath(newKey)
         const tab = tabsRef.current.get(newKey)
         if (tab?.rootPath) {
-          window.location.hash = `${tab.rootPath}:${tab.path}`
+          window.location.hash = `${tab.rootPath}::${tab.path}`
         } else if (tab) {
           window.location.hash = tab.path
         }
@@ -399,7 +399,7 @@ export function useTabs(options: UseTabsOptions = {}): UseTabsReturn {
         setActiveTabPath(newKey)
         const tab = tabsRef.current.get(newKey)
         if (tab?.rootPath) {
-          window.location.hash = `${tab.rootPath}:${tab.path}`
+          window.location.hash = `${tab.rootPath}::${tab.path}`
         } else if (tab) {
           window.location.hash = tab.path
         }
@@ -632,7 +632,7 @@ const getActiveTabSync = useCallback((): OpenTab | null => {
         setActiveTabPath(data.activeTabPath)
         const activeTab = tabsRef.current.get(data.activeTabPath)
         if (activeTab?.rootPath) {
-          window.location.hash = `${activeTab.rootPath}:${activeTab.path}`
+          window.location.hash = `${activeTab.rootPath}::${activeTab.path}`
         } else if (activeTab) {
           window.location.hash = activeTab.path
         }

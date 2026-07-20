@@ -466,7 +466,7 @@ function App() {
       setFileGroups(data.groups || [])
       if (!activeDir && data.groups?.length > 0) {
         const hash = decodeURIComponent(window.location.hash.slice(1))
-        const colonIndex = hash.indexOf(':')
+        const colonIndex = hash.indexOf('::')
         const rootFromHash = colonIndex > 0 ? hash.substring(0, colonIndex) : null
 
         if (rootFromHash) {
@@ -617,12 +617,12 @@ function App() {
       const hash = decodeURIComponent(window.location.hash.slice(1))
       if (hash && loadingRef.current !== hash) {
         loadingRef.current = hash
-        const colonIndex = hash.indexOf(':')
+        const colonIndex = hash.indexOf('::')
         let rootPath: string | null = null
         let filePath: string
         if (colonIndex > 0) {
           rootPath = hash.substring(0, colonIndex)
-          filePath = hash.substring(colonIndex + 1)
+          filePath = hash.substring(colonIndex + 2)
         } else {
           filePath = hash
         }
